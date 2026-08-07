@@ -1,0 +1,57 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "c5-triage-uncovered-branch.schema.json",
+  "title": "c5-triage-uncovered-branch output: one batched call's classifications",
+  "description": "One call classifies every sampled uncovered branch within one enclosing method/class (docs/phase-c-acceptance.md, Step 5). Each entry doubles as one triage log entry.",
+  "type": "array",
+  "minItems": 1,
+  "maxItems": 6,
+  "$comment": "maxItems is a hard cap, mirroring b3's 2-hop neighborhood cap. A method/class with more uncovered branches is pre-split by the orchestrator into multiple sub-batches before this step ever runs (steps/c5-triage-uncovered-branch.yaml) — never relaxed to fit a larger batch through in one call.",
+  "items": { "$ref": "#/$defs/triage_entry" },
+  "$defs": {
+    "triage_entry": {
+      "type": "object",
+      "required": ["bhv_id", "file_line", "classification", "seed_data_strategy"],
+      "additionalProperties": false,
+      "properties": {
+        "bhv_id": { "type": "string", "pattern": "^BHV-[0-9]{4,}$" },
+        "file_line": { "type": "string" },
+        "classification": {
+          "type": "string",
+          "enum": ["missing_scenario", "dead_code", "unreachable_defensive", "not_sampled"],
+          "description": "not_sampled is never produced by this LLM step — it is written directly by the orchestrator for a risk_tier: sampled behavior's branches that fell outside the sampling rate. See docs/metrics.md #3."
+        },
+        "justification": {
+          "type": "string",
+          "description": "Required and non-boilerplate when classification is dead_code or unreachable_defensive."
+        },
+        "suggested_scenario_summary": {
+          "type": "string",
+          "description": "Required when classification == missing_scenario; routes back to c1/c2."
+        },
+        "seed_data_strategy": {
+          "type": "string",
+          "description": "Carried from Phase 0 so 'unreachable given this data' can be told apart from 'unreachable given any data'."
+        },
+        "sample_rate": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Only meaningful on not_sampled entries: the recorded per-application sampling rate in effect when this branch was excluded."
+        },
+        "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+        "timestamp": { "type": "string" }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "classification": { "const": "missing_scenario" } } },
+          "then": { "required": ["suggested_scenario_summary"] }
+        },
+        {
+          "if": { "properties": { "classification": { "enum": ["dead_code", "unreachable_defensive"] } } },
+          "then": { "required": ["justification"], "properties": { "justification": { "minLength": 1 } } }
+        }
+      ]
+    }
+  }
+}

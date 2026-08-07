@@ -1,0 +1,47 @@
+id: a6-lift-db-logic
+phase: A
+tier: S
+description: >
+  Turn one DB trigger or stored-procedure body into a plain-language rule
+  description and a candidate RULE node stub, with a DERIVED_FROM edge back
+  to the source DB node. The same mechanism as a3, applied to the other
+  place JaCoCo can't see: trigger/procedure logic executes inside the DB
+  engine, not the JVM, so it is exactly as coverage-invisible as EL and
+  needs the identical lift (D10, REVIEW.md — closed).
+input:
+  type: single_node
+  source: nodes.jsonl, kind == "db" with raw_facts.kind in
+    ["trigger", "stored_procedure"]
+  fields: [id, name, kind, body_ref, body_text]
+  bound: exactly one trigger/procedure body per call
+  note: body_text is not stored in nodes.jsonl (only body_ref, a pointer,
+    is — see docs/phase-a-inventory.md, since trigger/procedure source
+    often isn't in the app's own repo) — the orchestrator resolves body_ref
+    into body_text at call time, the same way it resolves any other
+    legacy_refs pointer before handing content to a prompt.
+prompt: prompts/a6-lift-db-logic.md
+output_schema: schemas/a6-lift-db-logic.schema.json
+validators:
+  - source DB node id in the response exists in nodes.jsonl
+  - proposed RULE node's description references only table/column/parameter
+    names present in body_text (no invented conditions)
+  - a DERIVED_FROM edge from the new RULE id to the source DB node id is
+    present in the output
+  - confidence field present and in [0,1]
+escalate:
+  trigger: 3 consecutive schema-validation failures, OR confidence < 0.5 twice
+  action: retry at tier M with the full body_text (not a truncated excerpt)
+    plus the table's column list as extra context; log the escalation event
+idempotent: true
+resumable: true
+notes: >
+  Output RULE nodes are candidates, same status as a3's — they enter
+  nodes.jsonl with extraction_confidence "certain" but are not claimed by
+  any behavior until Phase B links them via a GUARDS/COVERS edge.
+
+  Coverage story: like EL-lifted RULE nodes, a DB-logic-lifted RULE node has
+  no c4 branch-coverage path — c4 measures JVM bytecode branches, and a
+  trigger/procedure body never executes as JVM bytecode. This is an
+  accepted, documented blind spot compensated by this lift, not a gap c4 is
+  expected to close. See docs/phase-a-inventory.md, "Structural skeletons,"
+  and docs/metrics.md.

@@ -1,0 +1,46 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "b5-check-sizing-and-density.schema.json",
+  "title": "b5-check-sizing-and-density output",
+  "oneOf": [
+    { "$ref": "#/$defs/sizing_report" },
+    { "$ref": "#/$defs/completeness_report" }
+  ],
+  "$defs": {
+    "sizing_report": {
+      "type": "object",
+      "required": ["bhv_id", "ac_count", "sum_cc", "sizing_status", "risk_tier"],
+      "additionalProperties": false,
+      "properties": {
+        "bhv_id": { "type": "string", "pattern": "^BHV-[0-9]{4,}$" },
+        "ac_count": { "type": "integer", "minimum": 0 },
+        "legacy_loc": { "type": "integer", "minimum": 0 },
+        "sum_cc": { "type": "number", "minimum": 0 },
+        "sizing_status": { "type": "string", "enum": ["ok", "split_required"] },
+        "scenario_density": {
+          "type": ["number", "null"],
+          "description": "null when sum_cc < 5, or once c4 has produced measured coverage for this behavior (expired — see docs/metrics.md #1)."
+        },
+        "density_status": {
+          "type": ["string", "null"],
+          "enum": ["under-specified", "in-band", "too-coarse", null]
+        },
+        "risk_tier": {
+          "type": "string",
+          "enum": ["full", "sampled"],
+          "description": "Mechanical: taxonomy in {rule, process} -> full, else sampled, unless the BHV has high_risk_override: true. See docs/phase-b-behaviors.md, docs/metrics.md #3."
+        }
+      }
+    },
+    "completeness_report": {
+      "type": "object",
+      "required": ["scope", "coverage_fraction", "uncovered_node_ids"],
+      "additionalProperties": false,
+      "properties": {
+        "scope": { "const": "inventory_completeness" },
+        "coverage_fraction": { "type": "number", "minimum": 0, "maximum": 1 },
+        "uncovered_node_ids": { "type": "array", "items": { "type": "string" } }
+      }
+    }
+  }
+}

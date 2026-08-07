@@ -1,0 +1,31 @@
+id: c1-derive-acceptance-criteria
+phase: C
+tier: M
+description: >
+  Derive the acceptance-criteria list for one behavior from its confirmed
+  node set and legacy_refs excerpts. Every AC must cite legacy evidence; a
+  genuinely new AC (deliberate gap-fix, no legacy precedent) is authored by
+  a human reviewer directly, flagged origin: new, and never produced here.
+input:
+  type: single_behavior
+  source: one BHV-####.md + the legacy_refs excerpts for its covered nodes
+  fields: [bhv_id, covered_nodes, legacy_excerpts]
+  bound: exactly one behavior per call
+prompt: prompts/c1-derive-acceptance-criteria.md
+output_schema: schemas/c1-derive-acceptance-criteria.schema.json
+validators:
+  - every AC cites at least one legacy_refs entry drawn from the supplied
+    legacy_excerpts (no invented citation)
+  - AC count is reported (feeds b5's sizing re-check)
+  - each AC has a Given/When/Then shape with non-empty fields
+escalate:
+  trigger: 3 consecutive schema-validation failures, OR fewer than 1 AC
+    produced for a behavior with ΣCC >= 5
+  action: retry at tier L with full (non-excerpted) legacy source for the
+    behavior's covered nodes; log the escalation event
+idempotent: true
+resumable: true
+notes: >
+  Output ACs are written into the BHV's scenario table
+  (templates/BHV-template.md) — this is the only place ACs are authored;
+  c2/c3 downstream never re-derive them, only transform or render them.

@@ -1,0 +1,26 @@
+id: c6-validate-acceptance-spec
+phase: C
+tier: script
+description: >
+  Deterministic exit gate for Phase C on one behavior: legacy_refs
+  resolution on every AC/decision-table row, rendered-output existence and
+  idempotence for every configured spec_format, zero unresolved triage-log
+  entries for this behavior, and every unreachable_defensive entry has a
+  non-empty justification. See docs/phase-c-acceptance.md, step 6.
+input:
+  type: single_behavior
+  source: one BHV-####.md + its rendered output + the application's triage log
+  bound: not applicable (deterministic validator, not an LLM step)
+output_schema: schemas/c6-validate-acceptance-spec.schema.json
+validators:
+  - this step IS the validator; see validators/README.md
+escalate:
+  trigger: not applicable
+  action: >
+    a failure blocks Phase C sign-off for this behavior; fixed by routing
+    back to c1/c2/c5 as appropriate, never by escalating a model tier
+idempotent: true
+resumable: true
+notes: >
+  A behavior is "done" (docs/method.md, "What done means for a behavior")
+  only once this step passes.

@@ -1,0 +1,34 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "b1-detect-rule-similarity-candidates.schema.json",
+  "title": "b1-detect-rule-similarity-candidates output",
+  "type": "object",
+  "required": ["clusters"],
+  "additionalProperties": false,
+  "properties": {
+    "clusters": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["cluster_id", "members", "similarity_score"],
+        "properties": {
+          "cluster_id": { "type": "string" },
+          "members": {
+            "type": "array",
+            "minItems": 2,
+            "maxItems": 5,
+            "items": {
+              "type": "object",
+              "required": ["node_id", "excerpt"],
+              "properties": {
+                "node_id": { "type": "string", "pattern": "^(SVC|RULE)-[0-9]{4,}$" },
+                "excerpt": { "type": "string" }
+              }
+            }
+          },
+          "similarity_score": { "type": "number", "minimum": 0, "maximum": 1 }
+        }
+      }
+    }
+  }
+}

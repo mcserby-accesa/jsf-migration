@@ -1,0 +1,32 @@
+id: b4-write-behavior-spec
+phase: B
+tier: M
+description: >
+  Draft the BHV-####.md body (description, scenario stubs with
+  legacy_refs) from a confirmed node boundary (output of b3, or a confirmed
+  b2 cluster for rule-taxonomy behaviors), per templates/BHV-template.md.
+input:
+  type: single_behavior_draft
+  source: output of b3-draft-behavior-boundary or b2-confirm-rule-behavior
+  fields: [confirmed_node_ids, taxonomy, legacy_refs_by_node]
+  bound: exactly one confirmed behavior boundary per call
+prompt: prompts/b4-write-behavior-spec.md
+output_schema: schemas/b4-write-behavior-spec.schema.json
+validators:
+  - output validates against schemas/bhv.schema.json (the canonical BHV
+    frontmatter + scenario table shape, templates/BHV-template.md)
+  - every scenario stub cites at least one legacy_refs entry drawn from the
+    input's legacy_refs_by_node (no invented references)
+  - assigned id matches '^BHV-[0-9]{4,}$' and is not already present in the
+    behavior registry
+idempotent: true
+resumable: true
+escalate:
+  trigger: 3 consecutive schema-validation failures
+  action: retry at tier L with the full source text (not excerpts) of each
+    confirmed node's legacy_refs span; log the escalation event
+notes: >
+  This step drafts scenario STUBS, not final acceptance criteria — c1 in
+  Phase C derives the actual AC list. b4's scenarios exist to make the
+  sizing estimate (b5) concrete and to give reviewers something to read
+  before Phase C's deeper AC work starts.

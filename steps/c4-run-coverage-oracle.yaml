@@ -1,0 +1,34 @@
+id: c4-run-coverage-oracle
+phase: C
+tier: script
+description: >
+  Run one behavior's rendered tests against the booted legacy application
+  (via framework.yaml:legacy_test_seam) instrumented with
+  framework.yaml:coverage_tool, producing a branch-level coverage report
+  scoped to the behavior's covered nodes' legacy_refs spans.
+input:
+  type: single_behavior_rendered_tests
+  source: output of c3-render-tests + the booted legacy app (Phase 0 gate)
+  bound: exactly one behavior's rendered tests per invocation (may be
+    batched operationally for runtime efficiency, but the report is always
+    attributable back to one behavior)
+output_schema: schemas/c4-run-coverage-oracle.schema.json
+validators:
+  - report's branch entries all fall within the behavior's claimed
+    legacy_refs spans (no attribution to unrelated code)
+  - report includes both "covered" and "uncovered" branches explicitly
+    (silence about a branch is treated as a report bug, not as "covered")
+escalate:
+  trigger: not applicable
+  action: >
+    a coverage tool failure to attach/instrument is a Phase 0 regression —
+    re-check the Phase 0 entry gate, do not retry this step blindly
+idempotent: true
+resumable: true
+notes: >
+  coverage_tool and legacy_test_seam (framework.yaml) are consumed here for
+  the real run (Phase 0's gate only checks reachability/wiring, never
+  reinterprets either value — see framework.yaml's boundary comments). This
+  step's own contract reads legacy_test_seam only to select which harness to
+  run against; target_test_seam is Phase D's (d3/d4) concern, not this
+  step's.

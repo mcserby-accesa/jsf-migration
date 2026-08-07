@@ -1,0 +1,34 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "c6-validate-acceptance-spec.schema.json",
+  "title": "c6-validate-acceptance-spec report",
+  "type": "object",
+  "required": ["bhv_id", "status", "checks"],
+  "additionalProperties": false,
+  "properties": {
+    "bhv_id": { "type": "string", "pattern": "^BHV-[0-9]{4,}$" },
+    "status": { "type": "string", "enum": ["pass", "fail"] },
+    "checks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "passed"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "enum": [
+              "legacy_refs_resolve",
+              "rendered_output_exists_for_every_spec_format",
+              "rendering_idempotent",
+              "no_unresolved_triage_entries",
+              "unreachable_defensive_has_justification"
+            ]
+          },
+          "passed": { "type": "boolean" },
+          "failures": { "type": "array", "items": { "type": "string" } }
+        }
+      },
+      "minItems": 5
+    }
+  }
+}

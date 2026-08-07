@@ -1,0 +1,39 @@
+id: c3-render-tests
+phase: C
+tier: script
+description: >
+  Deterministically render one behavior's ACs and decision tables into
+  framework.yaml:spec_format (gherkin | junit | both), per the mapping
+  rules in templates/renderers/gherkin.md and templates/renderers/junit.md.
+  Never an LLM call — this is the mechanism that guarantees rendered
+  formats can never hand-drift from the canonical BHV or from each other.
+input:
+  type: single_behavior
+  source: one BHV-####.md, fully authored through c1/c2/c2b
+  bound: exactly one behavior per call; deterministic template expansion,
+    not an LLM step
+output_schema: schemas/c3-render-tests.schema.json
+validators:
+  - re-rendering the same unchanged BHV-####.md produces byte-identical
+    output (idempotence)
+  - every AC/decision-table row in the source BHV is accounted for by the
+    rendered output: either it has its own rendered scenario/test method,
+    OR its decision_table_ref is non-empty and that table's own rendered
+    Scenario Outline/@ParameterizedTest exists (per
+    templates/renderers/*.md rule "decision_table_ref rows are not
+    independently rendered") — a row satisfying neither is a silent drop
+    (this is D4's fix: a row with a non-empty decision_table_ref used to be
+    ambiguous between "rendered on its own" and "rendered via its table,"
+    and the renderers resolved it inconsistently by hand)
+  - if spec_format is "both", gherkin and junit outputs reference the same
+    set of source AC ids
+escalate:
+  trigger: not applicable
+  action: >
+    a rendering rule that can't mechanically express something the AC/table
+    says is a bug in templates/renderers/*.md to fix, not a case for
+    hand-translation or LLM fallback
+idempotent: true
+resumable: true
+notes: >
+  spec_format is consumed ONLY here — see framework.yaml's boundary comment.

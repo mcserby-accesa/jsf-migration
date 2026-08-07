@@ -1,0 +1,34 @@
+id: a4-confirm-edge-inference
+phase: A
+tier: S
+description: >
+  Resolve one candidate edge that static analysis could not pin to exactly
+  one target node (dynamic dispatch, dependency-injected interfaces,
+  reflection), by choosing among the short list of candidate targets the
+  extractor already narrowed it to.
+input:
+  type: single_candidate_edge
+  source: edges.jsonl, filtered to extraction_confidence == "ambiguous"
+  fields: [from, candidate_targets (list of node id + brief evidence), edge_type, evidence]
+  bound: exactly one candidate edge per call; candidate_targets list is
+    itself bounded by the extractor (typically 2-6 concrete implementations
+    of an interface) — a4 never searches the graph itself
+prompt: prompts/a4-confirm-edge-inference.md
+output_schema: schemas/a4-confirm-edge-inference.schema.json
+validators:
+  - chosen target (or "none_of_the_above" / "multiple") is one of the
+    supplied candidate_targets, or one of the two explicit escape values
+  - evidence field in the response quotes or paraphrases only the supplied evidence
+  - confidence field present and in [0,1]
+escalate:
+  trigger: 3 consecutive schema-validation failures, OR "multiple" chosen
+    twice in a row for the same edge across retries
+  action: retry at tier M with each candidate target's public method
+    signatures added as extra context; log the escalation event
+idempotent: true
+resumable: true
+notes: >
+  A "multiple" verdict is a valid, useful output — it means the edge should
+  be split into several concrete edges (one per matching target) rather than
+  forced into a single choice; the orchestrator handles that fan-out
+  mechanically, it is not re-asked of the model.

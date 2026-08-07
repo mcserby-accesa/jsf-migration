@@ -1,0 +1,28 @@
+id: a5-validate-inventory
+phase: A
+tier: script
+description: >
+  Deterministic exit gate for Phase A. Checks edge endpoint resolution,
+  legacy_refs resolution, ID uniqueness, that no node remains
+  extraction_confidence "ambiguous", and that every known file type in the
+  application's repo layout was scanned at least once. See
+  docs/phase-a-inventory.md, "Phase A exit gate".
+input:
+  type: full_graph
+  source: nodes.jsonl, edges.jsonl
+  bound: not applicable (deterministic validator over the full graph, not an
+    LLM step)
+output_schema: schemas/a5-validate-inventory.schema.json
+validators:
+  - this step IS the validator; its own output is a pass/fail report, see
+    validators/README.md for the contract this step implements
+escalate:
+  trigger: not applicable
+  action: none — a5 failing means Phase A is not done; it blocks progression
+    to Phase B and is fixed by re-running a1-a4, not by escalating a model tier
+idempotent: true
+resumable: true
+notes: >
+  Run this after every extraction pass, not just once. A "pass" result is
+  what gates the Phase A -> Phase B transition referenced throughout
+  docs/phase-b-behaviors.md.

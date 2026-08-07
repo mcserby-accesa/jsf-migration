@@ -1,0 +1,32 @@
+id: b5-check-sizing-and-density
+phase: B
+tier: script
+description: >
+  Deterministic checks: AC count and legacy LOC against the split
+  thresholds, and (once ΣCC(BHV) >= 5) the scenario-density ratio. Also
+  assigns risk_tier (taxonomy in {rule, process} -> full, else sampled,
+  unless a human has set high_risk_override: true) — a table lookup, not a
+  judgment call. Also implements Phase B's completeness gate: every active
+  inventory node must have >=1 COVERS edge from some BHV. See
+  docs/phase-b-behaviors.md and docs/metrics.md.
+input:
+  type: single_behavior_or_full_graph
+  source: one BHV-####.md (for sizing/density) or the full nodes.jsonl
+    (for the completeness gate pass)
+  bound: sizing/density check is bounded to one behavior per call; the
+    completeness gate is a full-graph deterministic scan, not an LLM step,
+    so the "one node" bound does not apply to it
+output_schema: schemas/b5-check-sizing-and-density.schema.json
+validators:
+  - this step IS a validator; see validators/README.md
+escalate:
+  trigger: not applicable
+  action: >
+    a threshold violation does not "escalate" a model tier — it routes back
+    to b3/b4 (re-run on a narrower node subset) for sizing violations, or to
+    the out-of-scope-triage mechanism for completeness-gate violations
+idempotent: true
+resumable: true
+notes: >
+  Sizing checks re-run after c1 returns real AC counts, not only at drafting
+  time, since b4's estimated_ac_count is only an estimate.

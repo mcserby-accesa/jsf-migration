@@ -1,0 +1,65 @@
+id: c5-triage-uncovered-branch
+phase: C
+tier: S
+description: >
+  Classify every sampled uncovered branch within one enclosing method/class
+  (from c4's report) into exactly one of missing_scenario / dead_code /
+  unreachable_defensive, with a written justification for the latter two.
+  Which branches reach this step at all is decided upstream by the
+  behavior's risk_tier (docs/phase-b-behaviors.md) — see notes.
+input:
+  type: batched_branches_one_scope
+  source: output of c4-run-coverage-oracle, every uncovered branch within one
+    enclosing method/class, pre-filtered by the orchestrator per risk_tier
+  fields: [bhv_id, risk_tier, enclosing_scope_context, branches: [{file_line,
+    code_context}], seed_data_strategy]
+  bound: exactly one enclosing method/class's uncovered branches per call,
+    HARD CAPPED at 6 branches per call — batched by scope, not by behavior
+    or by file, so the model sees exactly the context it needs to judge
+    every branch in the batch and no more. A method/class with more than 6
+    uncovered branches is pre-split by the orchestrator into multiple
+    sub-batches of at most 6 (deterministic split by ascending line number,
+    each sub-batch still receiving the full enclosing_scope_context — the
+    cost driver is branches-per-call, not context size), same
+    mechanical-pre-split principle as b3's 2-hop neighborhood cap, never
+    solved by raising the tier. Without this cap, a large switch/validation
+    method could hand a tier-S model 15+ independent judgments in one call —
+    exactly the shape of task where an earlier classification anchors a
+    later one, producing a fluent, schema-valid, wrong batch (REVIEW.md
+    §1.3's failure mode, not a hypothetical one).
+prompt: prompts/c5-triage-uncovered-branch.md
+output_schema: schemas/c5-triage-uncovered-branch.schema.json
+validators:
+  - every classification is one of missing_scenario / dead_code / unreachable_defensive
+  - if dead_code or unreachable_defensive, justification field is non-empty
+    and references the supplied code_context (not a generic boilerplate reason)
+  - if missing_scenario, a suggested_scenario_summary field is present to
+    route back into c1/c2
+  - the output array has exactly one entry per branch in the input batch
+escalate:
+  trigger: 3 consecutive schema-validation failures (standard policy, see
+    docs/model-tiers.md)
+  action: retry at tier M with the batch's full enclosing method/class body
+    (not just the excerpt) as extra context; log the escalation event
+idempotent: true
+resumable: true
+notes: >
+  Every classification (not just escalations) is appended to the
+  application's single triage log — see docs/phase-c-acceptance.md, step 5,
+  and schemas/c5-triage-uncovered-branch.schema.json for the log entry shape.
+  seed_data_strategy (from Phase 0) is passed through so a reviewer can tell
+  "unreachable given this data" apart from "unreachable given any data."
+
+  risk_tier gates which branches reach this step, not what this step does
+  with them: for risk_tier "full" every uncovered branch in the behavior is
+  batched through eventually; for "sampled" only the sampled subset is —
+  the orchestrator writes "not_sampled" triage entries directly for the
+  rest, no LLM call involved. This step's own contract and prompt are
+  identical either way. See docs/metrics.md #3.
+
+  Dropped from this contract (D8, REVIEW.md §2): the previous escalation
+  trigger required re-running every triage twice and comparing results,
+  which both doubled this step's already-highest call volume and
+  contradicted idempotent: true declared above. Reproducibility divergence
+  is now caught by Step 5b's independent-re-derivation sample
+  (docs/phase-c-acceptance.md), not by duplicating every call.

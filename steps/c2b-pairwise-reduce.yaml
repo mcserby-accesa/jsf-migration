@@ -1,0 +1,29 @@
+id: c2b-pairwise-reduce
+phase: C
+tier: script
+description: >
+  Where a decision table's dimensions include configuration values (feature
+  flags, role types, status enums) layered on top of logic branches, run the
+  table through framework.yaml:combinatorial_reducer (PICT or ACTS) to
+  produce a pairwise-covering subset. Deterministic algorithm — never an
+  LLM call.
+input:
+  type: single_decision_table
+  source: output of c2-build-decision-table, configuration-dimension columns only
+  bound: exactly one decision table's configuration dimensions per call;
+    not applicable as an LLM bound since this is a script step
+output_schema: schemas/c2b-pairwise-reduce.schema.json
+validators:
+  - reduced set still achieves pairwise coverage of all configuration-value
+    combinations from the input table (verifiable by re-running the same
+    reducer's own coverage check)
+  - MC/DC-relevant (non-configuration) rows from c2 are passed through
+    unchanged, never reduced
+escalate:
+  trigger: not applicable
+  action: none
+idempotent: true
+resumable: true
+notes: >
+  combinatorial_reducer (framework.yaml) is consumed only here — nothing
+  upstream (c1, c2) or downstream (c3) reads that parameter.

@@ -1,0 +1,36 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "c1-derive-acceptance-criteria.schema.json",
+  "title": "c1-derive-acceptance-criteria output",
+  "type": "object",
+  "required": ["bhv_id", "acs"],
+  "additionalProperties": false,
+  "properties": {
+    "bhv_id": { "type": "string", "pattern": "^BHV-[0-9]{4,}$" },
+    "acs": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["ac_id", "given", "when", "then", "legacy_refs", "origin"],
+        "properties": {
+          "ac_id": { "type": "string" },
+          "given": { "type": "string", "minLength": 1 },
+          "when": { "type": "string", "minLength": 1 },
+          "then": { "type": "string", "minLength": 1 },
+          "legacy_refs": {
+            "type": "array",
+            "items": { "type": "string" },
+            "minItems": 1
+          },
+          "origin": { "const": "legacy" },
+          "compound_condition": {
+            "type": "boolean",
+            "default": false,
+            "description": "True routes this AC to c2 for a decision table instead of standing alone."
+          }
+        }
+      }
+    }
+  }
+}

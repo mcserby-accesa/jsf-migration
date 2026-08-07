@@ -1,0 +1,38 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "a3-lift-el-expression.schema.json",
+  "title": "a3-lift-el-expression output",
+  "type": "object",
+  "required": ["source_node_id", "rule_node", "derived_from_edge", "confidence"],
+  "additionalProperties": false,
+  "properties": {
+    "source_node_id": { "type": "string", "pattern": "^(EL|TASK)-[0-9]{4,}$" },
+    "rule_node": {
+      "type": "object",
+      "required": ["proposed_id", "kind", "label", "plain_language_description", "referenced_properties"],
+      "additionalProperties": false,
+      "properties": {
+        "proposed_id": { "type": "string", "pattern": "^RULE-[0-9]{4,}$" },
+        "kind": { "const": "rule" },
+        "label": { "type": "string", "minLength": 1 },
+        "plain_language_description": { "type": "string", "minLength": 1 },
+        "referenced_properties": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Property/method names present in the raw EL/condition expression only."
+        }
+      }
+    },
+    "derived_from_edge": {
+      "type": "object",
+      "required": ["from", "to", "type"],
+      "properties": {
+        "from": { "type": "string", "pattern": "^RULE-[0-9]{4,}$" },
+        "to": { "type": "string" },
+        "type": { "const": "DERIVED_FROM" }
+      }
+    },
+    "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+    "needs_escalation": { "type": "boolean", "default": false }
+  }
+}

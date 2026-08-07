@@ -1,0 +1,37 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "a5-validate-inventory.schema.json",
+  "title": "a5-validate-inventory report",
+  "type": "object",
+  "required": ["status", "checks"],
+  "additionalProperties": false,
+  "properties": {
+    "status": { "type": "string", "enum": ["pass", "fail"] },
+    "checks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "passed"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "enum": [
+              "edge_endpoints_resolve",
+              "legacy_refs_resolve",
+              "no_duplicate_ids",
+              "no_remaining_ambiguous_nodes",
+              "known_file_types_scanned"
+            ]
+          },
+          "passed": { "type": "boolean" },
+          "failures": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Human-readable identifiers of the offending node/edge/legacy_ref, empty when passed."
+          }
+        }
+      },
+      "minItems": 5
+    }
+  }
+}

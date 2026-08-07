@@ -1,0 +1,49 @@
+id: b3-draft-behavior-boundary
+phase: B
+tier: M
+description: >
+  Given one seed node (SCR/PROC/JOB/SVC at an integration boundary/CFG at a
+  cross-cutting boundary) and its local subgraph, propose which nodes belong
+  inside this behavior's scope, the taxonomy tag, and a rough AC-count
+  estimate for the sizing check (docs/metrics.md).
+input:
+  type: single_node_neighborhood
+  source: nodes.jsonl + edges.jsonl, seed node + outgoing/incoming edges up
+    to 2 hops (hard cap)
+  fields: [seed_node, neighborhood_nodes, neighborhood_edges]
+  bound: exactly one seed node's 2-hop neighborhood per call. If the 2-hop
+    neighborhood exceeds what fits a single bounded call, it MUST be
+    pre-split mechanically (e.g. by edge type) into multiple narrower
+    candidate-boundary calls before reaching this step — never solved by
+    raising the tier. See docs/phase-b-behaviors.md, "Path 1".
+prompt: prompts/b3-draft-behavior-boundary.md
+output_schema: schemas/b3-draft-behavior-boundary.schema.json
+validators:
+  - every node id in the proposed boundary exists in the supplied neighborhood
+    (no node invented outside what was given)
+  - taxonomy tag is one of screen, process, rule, integration, job, cross-cutting
+  - estimated_ac_count is a positive integer
+  - seed node itself is included in the boundary
+escalate:
+  trigger: 3 consecutive schema-validation failures, OR proposed boundary
+    includes 0 nodes beyond the seed twice in a row (signals the neighborhood
+    was mis-bounded, not that the model needs more power)
+  action: retry at tier L only after confirming the neighborhood bound itself
+    isn't the problem (re-check hop cap / pre-split first); log the
+    escalation event either way
+idempotent: true
+resumable: true
+notes: >
+  bpmn_source_engine (framework.yaml) is consumed here, and only here: when
+  the seed node is a PROC, its value is copied verbatim into the drafted
+  boundary's frontmatter as a traceability label. Since REVIEW.md §5.4 item
+  3, engine continuity itself is checked at the Phase 0 gate (framework.yaml:
+  bpmn_source_engine vs bpmn_target_engine) — this step only ever copies the
+  source-side value, never compares the pair.
+
+  A deterministic script, run alongside this step (not part of its LLM
+  output_schema), renders the same neighborhood_nodes/neighborhood_edges
+  given as this step's input into a Mermaid diagram and attaches it to the
+  BHV as neighborhood_diagram. See docs/phase-b-behaviors.md, "Neighborhood
+  diagram" — this is mechanical rendering, not something b3's LLM call
+  should be asked to produce.

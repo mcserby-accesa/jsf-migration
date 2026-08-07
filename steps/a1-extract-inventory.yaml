@@ -1,0 +1,37 @@
+id: a1-extract-inventory
+phase: A
+tier: script
+description: >
+  Run every deterministic extractor (Java AST scan, view/bean pair scan,
+  EL expression scan, faces-config.xml parse, BPMN XML parse, DB catalog
+  introspection, scheduler config scan — see docs/phase-a-inventory.md) and
+  append their output to nodes.jsonl / edges.jsonl, then load both into the
+  query engine named by framework.yaml:graph_store. No LLM call in this
+  step; every node is written with extraction_confidence "certain" or
+  "ambiguous" per the rules in docs/phase-a-inventory.md.
+input:
+  type: repo_snapshot
+  source: the legacy application's source tree + booted DB catalog (Phase 0 gate passed)
+  bound: whole-repo scan is expected here — this is the one step in the
+    pipeline that is NOT bounded to one file/node, because it is a script,
+    not an LLM call. The "bounded input" constraint in docs/model-tiers.md
+    applies only to LLM steps.
+output_schema: schemas/a1-extract-inventory.schema.json
+validators:
+  - every emitted node has a non-empty id matching '^[A-Z]+-[0-9]{4,}$'
+  - every emitted node's prefix is one of SCR, SVC, PROC, TASK, JOB, NAV, DB, EL, CFG
+    (RULE nodes are never emitted by a1 — see a3 and b1/b2)
+  - re-running against an unchanged repo snapshot produces a byte-identical
+    nodes.jsonl / edges.jsonl (modulo append-only ordering)
+  - graph_store load step does not mutate nodes.jsonl / edges.jsonl
+escalate:
+  trigger: not applicable (script step; extractor crashes are a bug to fix, not an escalation)
+  action: none
+idempotent: true
+resumable: true
+notes: >
+  This step's extractors are the only implementation surface this framework
+  leaves fully unspecified beyond the extraction rules in
+  docs/phase-a-inventory.md — they are application-stack-specific (a JSF 1.x
+  app and a JSF 2.x/PrimeFaces app need different view scanners) and are not
+  written here by design.

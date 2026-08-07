@@ -1,0 +1,50 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "a1-extract-inventory.schema.json",
+  "title": "One line of nodes.jsonl or edges.jsonl produced by a1",
+  "description": "Each line in nodes.jsonl validates against $defs.node; each line in edges.jsonl validates against $defs.edge. See docs/phase-a-inventory.md for the full node/edge type list.",
+  "oneOf": [
+    { "$ref": "#/$defs/node" },
+    { "$ref": "#/$defs/edge" }
+  ],
+  "$defs": {
+    "node": {
+      "type": "object",
+      "required": ["id", "kind", "label", "legacy_refs", "extracted_by", "extraction_confidence", "status"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^(SCR|SVC|RULE|PROC|TASK|JOB|NAV|DB|EL|CFG|AUTHZ)-[0-9]{4,}$" },
+        "kind": {
+          "type": "string",
+          "enum": ["screen", "service", "rule", "process", "task", "job", "navigation", "db", "el", "config", "authz"]
+        },
+        "label": { "type": "string" },
+        "legacy_refs": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+        "extracted_by": { "type": "string" },
+        "extraction_confidence": { "type": "string", "enum": ["certain", "ambiguous", "rejected"] },
+        "classification_source": { "type": "string", "enum": ["script", "llm"] },
+        "status": { "type": "string", "enum": ["active", "removed"] },
+        "raw_facts": { "type": "object" }
+      },
+      "additionalProperties": false
+    },
+    "edge": {
+      "type": "object",
+      "required": ["from", "to", "type", "evidence"],
+      "properties": {
+        "from": { "type": "string" },
+        "to": { "type": "string" },
+        "type": {
+          "type": "string",
+          "enum": ["RENDERS", "INVOKES", "NAVIGATES_TO", "TRIGGERS", "READS", "WRITES", "STARTS", "CONTAINS", "SCHEDULES", "GUARDS", "DERIVED_FROM", "VALIDATED_BY", "CONVERTED_BY", "RESTRICTS", "COVERS"]
+        },
+        "evidence": { "type": "string", "minLength": 1 },
+        "extraction_confidence": { "type": "string", "enum": ["certain", "ambiguous", "rejected"] },
+        "candidate_targets": {
+          "type": "array",
+          "items": { "type": "object", "required": ["node_id", "evidence"], "properties": { "node_id": { "type": "string" }, "evidence": { "type": "string" } } }
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

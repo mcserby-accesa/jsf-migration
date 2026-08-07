@@ -1,0 +1,31 @@
+id: b2-confirm-rule-behavior
+phase: B
+tier: M
+description: >
+  Given one candidate cluster from b1 (2-5 near-duplicate code/rule
+  snippets), confirm it as a genuine shared rule behavior, reject it as a
+  coincidental similarity, or flag a partial split (some members belong,
+  some don't).
+input:
+  type: single_cluster
+  source: output of b1-detect-rule-similarity-candidates
+  fields: [cluster_id, members (node id + code/description excerpt each), similarity_score]
+  bound: exactly one cluster (2-5 members) per call — never the full set of
+    clusters, never the surrounding codebase beyond the supplied excerpts
+prompt: prompts/b2-confirm-rule-behavior.md
+output_schema: schemas/b2-confirm-rule-behavior.schema.json
+validators:
+  - verdict is one of confirmed / rejected / partial_split
+  - if partial_split, the response partitions the input members into
+    disjoint groups covering all of them (no member dropped, none duplicated)
+  - reasoning field is non-empty and references at least one member's excerpt
+escalate:
+  trigger: 3 consecutive schema-validation failures, OR verdict flip-flops
+    across 2 retries on the same cluster
+  action: retry at tier L with each member's full source method (not just
+    the excerpt) as extra context; log the escalation event
+idempotent: true
+resumable: true
+notes: >
+  On "confirmed" or "partial_split", this step's output feeds b4 to draft
+  the actual rule-taxonomy BHV — b2 itself does not write the BHV document.

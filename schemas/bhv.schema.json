@@ -1,0 +1,126 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "bhv.schema.json",
+  "title": "Canonical BHV-####.md, hydrated representation",
+  "description": "The one canonical shape a behavior document must validate against, regardless of which step (b4, c1, c2) last wrote to it. This validates the HYDRATED representation of a BHV-####.md — the YAML frontmatter block merged with the parsed '## Scenarios' table (-> scenarios) and '## Decision tables' section (-> decision_tables), assembled by whatever parses the .md file, not the raw frontmatter block in isolation. Fixes D1/D2 (REVIEW.md): 'scenarios' and 'decision_tables' are required content this schema validates, but they live in Markdown body sections, not the YAML frontmatter, in the .md file itself — see templates/BHV-template.md's header comment.",
+  "type": "object",
+  "required": ["id", "title", "taxonomy", "status", "risk_tier", "legacy_refs", "covers", "scenarios"],
+  "additionalProperties": false,
+  "properties": {
+    "id": { "type": "string", "pattern": "^BHV-[0-9]{4,}$" },
+    "title": { "type": "string", "minLength": 1 },
+    "taxonomy": {
+      "type": "string",
+      "enum": ["screen", "process", "rule", "integration", "job", "cross-cutting"]
+    },
+    "status": {
+      "type": "string",
+      "enum": ["draft", "sized", "acceptance-in-progress", "coverage-triaged", "done"]
+    },
+    "risk_tier": {
+      "type": "string",
+      "enum": ["full", "sampled"],
+      "description": "Assigned mechanically by b5 (docs/phase-b-behaviors.md, 'Risk tier'); gates how Phase C's c5 branch-triage gate applies. Not the same gate as Phase B's inventory-coverage completeness check, which is not risk-tiered."
+    },
+    "high_risk_override": {
+      "type": "boolean",
+      "default": false,
+      "description": "Human-set. True forces risk_tier: full regardless of taxonomy — for a behavior that touches money, authorization, or a state transition but whose taxonomy wouldn't otherwise trigger full triage."
+    },
+    "bpmn_source_engine": { "type": "string", "description": "Only present when taxonomy == process; copied verbatim from framework.yaml. Renamed from bpmn_target (REVIEW.md §5.4 item 3) — engine continuity is now a checked Phase 0 precondition, not an informational label; see docs/phase-0-environment.md." },
+    "neighborhood_diagram": {
+      "type": "string",
+      "description": "Mermaid source for this behavior's capped 2-hop neighborhood, generated deterministically alongside b3 from the same neighborhood_nodes/neighborhood_edges — never hand-edited, never LLM-authored. See docs/phase-b-behaviors.md, 'Neighborhood diagram.'"
+    },
+    "legacy_refs": {
+      "type": "array",
+      "items": { "type": "string" },
+      "minItems": 1,
+      "description": "Aggregated file:line spans across every covered node."
+    },
+    "covers": {
+      "type": "array",
+      "items": { "type": "string", "pattern": "^[A-Z]+-[0-9]{4,}$" },
+      "minItems": 1,
+      "description": "Inventory node IDs this behavior claims via COVERS edges."
+    },
+    "related_behaviors": {
+      "type": "array",
+      "items": { "type": "string", "pattern": "^BHV-[0-9]{4,}$" },
+      "default": []
+    },
+    "sizing": {
+      "type": "object",
+      "properties": {
+        "ac_count": { "type": "integer", "minimum": 0 },
+        "sum_cc": { "type": "number", "minimum": 0 },
+        "scenario_density": { "type": ["number", "null"] },
+        "density_band_status": {
+          "type": ["string", "null"],
+          "enum": ["under-specified", "in-band", "too-coarse", null]
+        }
+      }
+    },
+    "scenarios": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["scenario_id", "given", "when", "then", "legacy_refs", "origin"],
+        "additionalProperties": true,
+        "properties": {
+          "scenario_id": { "type": "string" },
+          "given": { "type": "string", "minLength": 1 },
+          "when": { "type": "string", "minLength": 1 },
+          "then": { "type": "string", "minLength": 1 },
+          "legacy_refs": { "type": "array", "items": { "type": "string" } },
+          "origin": { "type": "string", "enum": ["legacy", "new"] },
+          "decision_table_ref": {
+            "type": ["string", "null"],
+            "description": "Non-null means this row is a plain-language summary of one row of the referenced decision_tables entry, and is NOT independently rendered — see templates/renderers/*.md."
+          }
+        }
+      }
+    },
+    "decision_tables": {
+      "type": "array",
+      "description": "Fixes D2 (REVIEW.md): decision tables are canonical content c3 renders and c6 validates, but were previously unrepresentable under additionalProperties: false. Parsed from the '## Decision tables' section of the .md file, one entry per DT-BHV-####-NN table.",
+      "items": {
+        "type": "object",
+        "required": ["table_id", "sub_conditions", "rows"],
+        "additionalProperties": false,
+        "properties": {
+          "table_id": { "type": "string", "pattern": "^DT-BHV-[0-9]{4,}-[0-9]{2,}$" },
+          "backs_scenario": { "type": "string", "description": "The scenario_id whose decision_table_ref points here." },
+          "sub_conditions": {
+            "type": "array",
+            "minItems": 1,
+            "items": { "type": "string" }
+          },
+          "reduced_by": {
+            "type": ["string", "null"],
+            "description": "framework.yaml: combinatorial_reducer, if this table (or a sub-table layered on it) went through c2b's pairwise reduction. null for MC/DC rows, which are never pairwise-reduced."
+          },
+          "rows": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "required": ["row_id", "values", "expected_outcome", "legacy_refs"],
+              "additionalProperties": false,
+              "properties": {
+                "row_id": { "type": "string" },
+                "values": {
+                  "type": "object",
+                  "description": "Maps each entry in sub_conditions to that row's value for it."
+                },
+                "expected_outcome": { "type": "string", "minLength": 1 },
+                "legacy_refs": { "type": "array", "items": { "type": "string" } }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "c2-build-decision-table.schema.json",
+  "title": "c2-build-decision-table output",
+  "type": "object",
+  "required": ["bhv_id", "condition_expr", "sub_conditions", "rows"],
+  "additionalProperties": false,
+  "properties": {
+    "bhv_id": { "type": "string", "pattern": "^BHV-[0-9]{4,}$" },
+    "condition_expr": { "type": "string" },
+    "sub_conditions": {
+      "type": "array",
+      "items": { "type": "string" },
+      "minItems": 1
+    },
+    "rows": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["row_id", "values", "expected_outcome", "legacy_refs"],
+        "properties": {
+          "row_id": { "type": "string" },
+          "values": {
+            "type": "object",
+            "description": "Map of sub_condition -> boolean/value for this row.",
+            "additionalProperties": true
+          },
+          "expected_outcome": { "type": "string" },
+          "legacy_refs": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+          "is_configuration_dimension": {
+            "type": "boolean",
+            "default": false,
+            "description": "True marks this row's varying dimension as eligible for c2b pairwise reduction; false (the default) means it is MC/DC-relevant and must never be reduced."
+          }
+        }
+      }
+    }
+  }
+}

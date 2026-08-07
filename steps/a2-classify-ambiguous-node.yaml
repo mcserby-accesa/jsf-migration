@@ -1,0 +1,34 @@
+id: a2-classify-ambiguous-node
+phase: A
+tier: S
+description: >
+  Confirm the taxonomy/kind classification of one inventory node that a1's
+  extractor could not classify with certainty (e.g. a SCR with no
+  resolvable backing bean, or a candidate SVC that might be a cross-cutting
+  utility rather than a screen-scoped service).
+input:
+  type: single_node
+  source: nodes.jsonl, filtered to extraction_confidence == "ambiguous"
+  fields: [id, kind, raw_facts, legacy_refs]
+  bound: exactly one node per call; the node's own raw_facts and legacy_refs
+    excerpt only — never sibling nodes or the surrounding file beyond what
+    raw_facts already contains
+prompt: prompts/a2-classify-ambiguous-node.md
+output_schema: schemas/a2-classify-ambiguous-node.schema.json
+validators:
+  - node_id in the response exists in nodes.jsonl
+  - returned kind is one of the allowed enum values for that node's prefix family
+  - legacy_refs in the response are byte-identical to the input's legacy_refs
+    (the model may not invent or drop references)
+  - confidence field present and in [0,1]
+escalate:
+  trigger: 3 consecutive schema-validation failures, OR confidence < 0.5 on 2 consecutive attempts
+  action: retry at tier M with the node's 1-hop neighborhood added as extra
+    context; log the escalation event per docs/model-tiers.md
+idempotent: true
+resumable: true
+notes: >
+  Only nodes a1 flagged ambiguous are ever routed here — an unambiguous node
+  never reaches this step. Output sets extraction_confidence to "certain"
+  (with classification_source: "llm") or "rejected"; a1's node line is then
+  updated in place (same id, new fields), never duplicated.

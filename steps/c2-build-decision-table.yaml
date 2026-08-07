@@ -1,0 +1,32 @@
+id: c2-build-decision-table
+phase: C
+tier: M
+description: >
+  For one compound boolean condition (a rule behavior's logic, or any node's
+  compound branch) propose the full MC/DC-relevant decision table: one row
+  per condition combination needed to prove each condition independently
+  affects the outcome, with expected outcome and legacy_refs per row.
+input:
+  type: single_condition
+  source: one behavior's flagged compound condition + its legacy_refs excerpt
+  fields: [bhv_id, condition_expr, sub_conditions, legacy_excerpt]
+  bound: exactly one compound condition per call
+prompt: prompts/c2-build-decision-table.md
+output_schema: schemas/c2-build-decision-table.schema.json
+validators:
+  - every row's condition-value combination is unique (no duplicate rows)
+  - row count covers MC/DC for the stated number of sub_conditions (at
+    minimum sub_conditions + 1 rows; flag for review if fewer)
+  - every row cites a legacy_refs entry for its expected outcome
+escalate:
+  trigger: 3 consecutive schema-validation failures, OR row count
+    insufficient for MC/DC twice in a row
+  action: retry at tier L with the full method body containing the
+    condition as extra context; log the escalation event
+idempotent: true
+resumable: true
+notes: >
+  Decision-table rows produced here are NEVER pairwise-reduced — that would
+  silently drop MC/DC coverage claims. Pairwise reduction (c2b) only applies
+  to a separate configuration-value dimension layered on top of a table, not
+  to these rows themselves. See docs/phase-c-acceptance.md, step 2.

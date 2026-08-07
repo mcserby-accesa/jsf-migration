@@ -1,0 +1,23 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "a2-classify-ambiguous-node.schema.json",
+  "title": "a2-classify-ambiguous-node output",
+  "type": "object",
+  "required": ["node_id", "kind", "legacy_refs", "confidence", "reasoning"],
+  "additionalProperties": false,
+  "properties": {
+    "node_id": { "type": "string", "pattern": "^[A-Z]+-[0-9]{4,}$" },
+    "kind": {
+      "type": "string",
+      "enum": ["screen", "service", "process", "task", "job", "navigation", "db", "el", "config", "rejected"]
+    },
+    "legacy_refs": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Must be byte-identical to the input node's legacy_refs."
+    },
+    "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+    "needs_escalation": { "type": "boolean", "default": false },
+    "reasoning": { "type": "string", "minLength": 1 }
+  }
+}

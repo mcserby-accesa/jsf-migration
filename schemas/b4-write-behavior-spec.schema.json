@@ -1,0 +1,25 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "b4-write-behavior-spec.schema.json",
+  "title": "b4-write-behavior-spec output",
+  "description": "The drafted BHV document. Must additionally validate against bhv.schema.json once merged with its assigned id; status is always 'draft' immediately after this step.",
+  "allOf": [
+    { "$ref": "bhv.schema.json" },
+    {
+      "type": "object",
+      "properties": {
+        "status": { "const": "draft" },
+        "scenarios": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "origin": { "const": "legacy" }
+            }
+          },
+          "description": "b4 drafts scenario STUBS only; every one must cite legacy_refs. origin: new scenarios are added later, by a human, never by this step."
+        }
+      }
+    }
+  ]
+}

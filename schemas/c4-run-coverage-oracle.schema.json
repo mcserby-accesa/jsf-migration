@@ -1,0 +1,24 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "c4-run-coverage-oracle.schema.json",
+  "title": "c4-run-coverage-oracle output",
+  "type": "object",
+  "required": ["bhv_id", "coverage_tool", "branches"],
+  "additionalProperties": false,
+  "properties": {
+    "bhv_id": { "type": "string", "pattern": "^BHV-[0-9]{4,}$" },
+    "coverage_tool": { "type": "string" },
+    "branches": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["file_line", "status"],
+        "properties": {
+          "file_line": { "type": "string" },
+          "status": { "type": "string", "enum": ["covered", "uncovered"] }
+        }
+      },
+      "description": "Includes both covered and uncovered branches explicitly; absence of a branch entry is treated as a report bug."
+    }
+  }
+}

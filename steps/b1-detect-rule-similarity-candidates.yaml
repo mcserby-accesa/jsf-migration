@@ -1,0 +1,31 @@
+id: b1-detect-rule-similarity-candidates
+phase: B
+tier: script
+description: >
+  Mechanical pre-reduction for reusable-rule discovery. Runs clone/AST-
+  similarity detection across SVC method bodies and EL-lifted RULE stubs,
+  producing candidate clusters of 2-5 near-duplicate nodes with a
+  similarity score. This is what keeps b2 a bounded, tier-M-shaped step
+  instead of "read the codebase and find duplication," which no step in
+  this framework is allowed to ask a model to do directly.
+input:
+  type: full_graph_subset
+  source: nodes.jsonl, kind in [svc, rule]
+  bound: not applicable (deterministic algorithm over the full node subset,
+    not an LLM step)
+output_schema: schemas/b1-detect-rule-similarity-candidates.schema.json
+validators:
+  - every cluster has between 2 and 5 member node ids
+  - every member node id exists in nodes.jsonl
+  - similarity_score is in [0,1] and clusters are sorted descending by score
+escalate:
+  trigger: not applicable
+  action: none
+idempotent: true
+resumable: true
+notes: >
+  A low similarity_score cluster is still emitted, not filtered out here —
+  b2 is what decides "coincidental vs. genuine," this step's job is only to
+  propose bounded candidates. Tune the similarity threshold that determines
+  what counts as a "candidate" at the tool level; this framework does not
+  fix that threshold since it is corpus-dependent.

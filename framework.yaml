@@ -1,0 +1,101 @@
+# Framework parameters.
+#
+# Rule for every parameter in this file: it is consumed at exactly ONE
+# boundary (one step, one renderer). That is what makes each choice
+# reversible without leaking into upstream artifacts. The "consumed_by"
+# comment on each parameter is not decoration — it is the enforcement
+# mechanism. If you find a second place in the codebase reading one of
+# these values, that is a bug in the implementation, not a new feature.
+
+# Output format(s) for rendered executable specs.
+#   gherkin | junit | both
+# Consumed ONLY by steps/c3-render-tests.yaml. Nothing upstream of rendering
+# (inventory, behavior specs, acceptance criteria, decision tables) knows or
+# cares about this value. Changing it produces different files in
+# examples/-shaped output directories; it never changes a BHV-####.md.
+# Default is gherkin per DECISIONS.md #5 (more legible to non-engineers
+# reviewing behavior specs during triage); junit/both remain first-class.
+spec_format: gherkin
+
+# BPMN engine pair. Changed from an informational label (`bpmn_target`) to a
+# checked precondition per REVIEW.md §5.4 item 3: under the Phase D decision
+# (DECISIONS.md, 2026-08-07), process definitions are deployed to a real
+# target engine, so engine continuity is no longer an assumption the
+# framework can leave implicit.
+#   e.g. camunda7 | camunda8 | flowable | jbpm | none
+# bpmn_source_engine is consumed by steps/b3-draft-behavior-boundary.yaml
+# (copied verbatim into process-type BHV frontmatter as a traceability
+# label) AND checked, together with bpmn_target_engine, at the Phase 0 gate
+# (docs/phase-0-environment.md) — same-engine/same-file-structure/redesign
+# are three cases with very different cost, and the gate must not let a
+# "redesign" case pass silently into Phase D.
+bpmn_source_engine: camunda7
+bpmn_target_engine: camunda7
+
+# Test seam(s). Split into a legacy/target pair per REVIEW.md §5.3 — the
+# legacy JSF app and the target Spring Boot/Angular app are different
+# systems with different seams; one parameter cannot describe both.
+#
+# legacy_test_seam: rest | service | ui
+#   Which layer c3's legacy render and c4 exercise against the *legacy* app.
+#   Consumed by templates/renderers/junit.md (selects skeleton shape),
+#   steps/c4-run-coverage-oracle.yaml (runs against it), and validated for
+#   reachability (not reinterpreted) by Phase 0's entry gate — see D6 in
+#   REVIEW.md: these three reads are the gate checking the same choice that
+#   c3/c4 later consume, not three independent meanings of the parameter.
+#   Default is `service`, not `rest` — most legacy JSF apps are
+#   postback/ViewState-driven with no REST boundary; `rest` assumes a
+#   boundary that typically doesn't exist, and `ui` is where Phase C's
+#   effort explodes (driving ViewState/partial-ajax through a browser).
+#   `service` is the default because it is invocable outside the web
+#   container and reaches the backing beans where JSF business logic lives.
+#   Confirm which seam actually exists per-application at the Phase 0 gate
+#   (docs/phase-0-environment.md) — do not assume this default holds.
+legacy_test_seam: service
+#
+# Phase D also needs target_test_seam, layout_fidelity, and
+# service_boundary_fidelity — all three are designed and documented in
+# DECISIONS.md's Phase D sketch, but deliberately NOT declared here yet.
+# Every other parameter in this file has a real, authored consumer today;
+# these three don't (Phase D's steps are sketched only, per REVIEW.md §0's
+# ordering — do not author them before the smoke test completes). Adding
+# config for a phase that doesn't exist is exactly the kind of premature
+# completeness this framework otherwise avoids. Promote them here, with
+# their defaults, when `d0`-`d6` are actually authored — not before.
+
+# Where nodes.jsonl / edges.jsonl get loaded for querying.
+#   duckdb | sqlite
+# Consumed ONLY by the graph-load step implied in steps/a1-extract-inventory.yaml
+# (the "load" sub-step after raw extraction). nodes.jsonl and edges.jsonl
+# remain the source of truth regardless of this value; this only changes
+# which query engine reads them.
+graph_store: duckdb
+
+# Coverage tool used for the Phase C completeness oracle.
+#   jacoco | cobertura | (other JVM coverage tool)
+# Consumed by steps/c4-run-coverage-oracle.yaml for the real run, and
+# checked (not reinterpreted) by Phase 0's entry gate, which proves once
+# that this tool actually attaches and emits a report before Phase B
+# produces fifty behaviors on the strength of an untested assumption.
+# Everything upstream (acceptance criteria, decision tables, rendered tests)
+# is written without knowledge of the coverage tool.
+coverage_tool: jacoco
+
+# Tool used to reduce configuration-combinatorics decision tables to a
+# pairwise-covering subset.
+#   pict | acts
+# Consumed ONLY by steps/c2b-pairwise-reduce.yaml. The full decision table
+# produced by c2-build-decision-table is tool-agnostic; only the reduction
+# step reads this value.
+combinatorial_reducer: pict
+
+# Maps abstract model size classes to concrete model families. Every step
+# contract declares S/M/L, never a vendor model name — this indirection is
+# the ONLY place a concrete model is named, so swapping providers touches one
+# file. Prompts are plain-text with a JSON Schema instruction; no
+# vendor-specific tool-use or structured-output feature is used, so any of
+# these slots can be filled by any comparable-capability model.
+model_tiers:
+  S: gemini-flash-class      # single bounded classification/extraction call
+  M: gemini-pro-class        # bounded synthesis over 2-5 items or one drafting call
+  L: reserved-escalation-only # never a step's default tier; see docs/model-tiers.md

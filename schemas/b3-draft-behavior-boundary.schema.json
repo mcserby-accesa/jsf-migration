@@ -1,0 +1,29 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "b3-draft-behavior-boundary.schema.json",
+  "title": "b3-draft-behavior-boundary output",
+  "type": "object",
+  "required": ["seed_node_id", "boundary_node_ids", "taxonomy", "estimated_ac_count", "reasoning"],
+  "additionalProperties": false,
+  "properties": {
+    "seed_node_id": { "type": "string" },
+    "boundary_node_ids": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "string" },
+      "description": "Must include seed_node_id; every id must exist in the supplied neighborhood."
+    },
+    "taxonomy": {
+      "type": "string",
+      "enum": ["screen", "process", "rule", "integration", "job", "cross-cutting"]
+    },
+    "bpmn_source_engine": { "type": "string", "description": "Present only when taxonomy == process; copied from framework.yaml, not invented." },
+    "estimated_ac_count": { "type": "integer", "minimum": 1 },
+    "reasoning": { "type": "string", "minLength": 1 },
+    "needs_prereduction": {
+      "type": "boolean",
+      "default": false,
+      "description": "True if the model judges the supplied neighborhood is still too large to draft confidently; triggers mechanical pre-split, not a tier escalation."
+    }
+  }
+}

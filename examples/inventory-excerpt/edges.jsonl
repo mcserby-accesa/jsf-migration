@@ -1,0 +1,7 @@
+{"from": "SCR-0142", "to": "SVC-0089", "type": "RENDERS", "evidence": "leave/detail.xhtml:1 managed-bean binding to leaveRequestBean", "extraction_confidence": "certain"}
+{"from": "NAV-0022", "to": "SCR-0150", "type": "NAVIGATES_TO", "evidence": "faces-config.xml:88-96 navigation-case to-view-id=/leave/confirmation.xhtml", "extraction_confidence": "certain"}
+{"from": "RULE-0031", "to": "SCR-0142", "type": "GUARDS", "evidence": "leave/detail.xhtml:142 rendered attribute on approveButtonPanel", "extraction_confidence": "certain"}
+{"from": "RULE-0031", "to": "EL-0089", "type": "DERIVED_FROM", "evidence": "a3-lift-el-expression output for EL-0089", "extraction_confidence": "certain"}
+{"from": "BHV-0142", "to": "SCR-0142", "type": "COVERS", "evidence": "b4-write-behavior-spec confirmed boundary", "extraction_confidence": "certain"}
+{"from": "BHV-0142", "to": "SVC-0089", "type": "COVERS", "evidence": "b4-write-behavior-spec confirmed boundary", "extraction_confidence": "certain"}
+{"from": "BHV-0142", "to": "NAV-0022", "type": "COVERS", "evidence": "b4-write-behavior-spec confirmed boundary", "extraction_confidence": "certain"}
