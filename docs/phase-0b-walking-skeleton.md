@@ -57,8 +57,7 @@ one-off check performed on this skeleton.
    `coverage_tool`. This is the one piece of harness construction this gate
    requires — scoped to exactly one behavior's test, by whatever means work
    (hardcoded setup is fine). It is not general harness/fixture/CI
-   construction; that remains Phase D's and Phase 0's stated non-goals
-   (`DECISIONS.md`).
+   construction, which remains a stated non-goal (`DECISIONS.md`).
 7. **Run `c4`.** Confirm the resulting coverage report's branch entries are
    attributable to this behavior's `legacy_refs` spans.
 

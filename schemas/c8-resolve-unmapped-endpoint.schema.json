@@ -1,0 +1,46 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "c8-resolve-unmapped-endpoint.schema.json",
+  "title": "c8-resolve-unmapped-endpoint output",
+  "type": "object",
+  "required": ["svc_id", "method_name", "resolution"],
+  "additionalProperties": false,
+  "properties": {
+    "svc_id": { "type": "string", "pattern": "^SVC-[0-9]{4,}$" },
+    "method_name": { "type": "string" },
+    "resolution": {
+      "type": "string",
+      "enum": ["mapped", "no_endpoint", "needs_human_contract"],
+      "description": "mapped: an operation was produced. no_endpoint: this method legitimately has no HTTP surface (internal helper reached only by another service). needs_human_contract: could not be decided — blocks c9's gate rather than shipping a guess."
+    },
+    "operation": {
+      "type": "object",
+      "required": ["path", "verb", "action_sub_resource", "openapi_fragment", "legacy_refs"],
+      "additionalProperties": false,
+      "description": "Required when resolution is 'mapped'; absent otherwise.",
+      "properties": {
+        "path": { "type": "string", "pattern": "^/" },
+        "verb": { "type": "string", "enum": ["get", "post", "put", "patch", "delete"] },
+        "action_sub_resource": { "type": "boolean" },
+        "roles": { "type": "array", "items": { "type": "string" } },
+        "legacy_refs": { "type": "array", "minItems": 1, "items": { "type": "string" } },
+        "openapi_fragment": { "type": "object" }
+      }
+    },
+    "reasoning": {
+      "type": "string",
+      "description": "Why this shape was chosen — specifically why the method is or is not CRUD-shaped, and which convention rule was applied. Recorded in the pack so the judgment is auditable rather than anonymous."
+    },
+    "confidence": { "type": "string", "enum": ["certain", "uncertain"] }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "resolution": { "const": "mapped" } }, "required": ["resolution"] },
+      "then": { "required": ["operation", "reasoning"] }
+    },
+    {
+      "if": { "properties": { "resolution": { "const": "no_endpoint" } }, "required": ["resolution"] },
+      "then": { "required": ["reasoning"] }
+    }
+  ]
+}

@@ -1,6 +1,6 @@
 # Prompt: a2-classify-ambiguous-node
 
-Tier: S. Step contract: `steps/a2-classify-ambiguous-node.yaml`. Output
+Step contract: `steps/a2-classify-ambiguous-node.yaml`. Output
 schema: `schemas/a2-classify-ambiguous-node.schema.json`.
 
 ## System / instruction text

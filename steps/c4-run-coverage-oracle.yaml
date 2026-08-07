@@ -1,6 +1,6 @@
 id: c4-run-coverage-oracle
 phase: C
-tier: script
+kind: script
 description: >
   Run one behavior's rendered tests against the booted legacy application
   (via framework.yaml:legacy_test_seam) instrumented with
@@ -30,5 +30,7 @@ notes: >
   the real run (Phase 0's gate only checks reachability/wiring, never
   reinterprets either value — see framework.yaml's boundary comments). This
   step's own contract reads legacy_test_seam only to select which harness to
-  run against; target_test_seam is Phase D's (d3/d4) concern, not this
-  step's.
+  run against. There is no target-side seam: this framework never tests the
+  replacement system (DECISIONS.md). Note that at the default seam (service)
+  this step cannot reach view-layer logic — EL and navigation rules are
+  validated in Phase D instead, not here.

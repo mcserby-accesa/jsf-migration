@@ -1,6 +1,6 @@
 id: c2-build-decision-table
 phase: C
-tier: M
+kind: llm
 description: >
   For one compound boolean condition (a rule behavior's logic, or any node's
   compound branch) propose the full MC/DC-relevant decision table: one row
@@ -21,7 +21,7 @@ validators:
 escalate:
   trigger: 3 consecutive schema-validation failures, OR row count
     insufficient for MC/DC twice in a row
-  action: retry at tier L with the full method body containing the
+  action: retry with the full method body containing the
     condition as extra context; log the escalation event
 idempotent: true
 resumable: true

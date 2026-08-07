@@ -1,11 +1,10 @@
 # Renderer: BHV -> JUnit
 
 Consumed by `steps/c3-render-tests.yaml` when `framework.yaml: spec_format`
-is `junit` or `both`. This is the *legacy* render — `framework.yaml:
-legacy_test_seam` (`rest` | `service` | `ui`) selects which of the three
-skeleton shapes below is emitted. (Phase D's target render is a separate,
-not-yet-authored step — `d3` — that will read `target_test_seam` instead;
-see `DECISIONS.md`.)
+is `junit` or `both`. Tests always run against the *legacy* app —
+`framework.yaml: legacy_test_seam` (`rest` | `service` | `ui`) selects which
+of the three skeleton shapes below is emitted. There is no target-side
+render: this framework never tests the replacement system (`DECISIONS.md`).
 
 ## File layout
 

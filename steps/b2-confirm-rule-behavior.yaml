@@ -1,6 +1,6 @@
 id: b2-confirm-rule-behavior
 phase: B
-tier: M
+kind: llm
 description: >
   Given one candidate cluster from b1 (2-5 near-duplicate code/rule
   snippets), confirm it as a genuine shared rule behavior, reject it as a
@@ -22,7 +22,7 @@ validators:
 escalate:
   trigger: 3 consecutive schema-validation failures, OR verdict flip-flops
     across 2 retries on the same cluster
-  action: retry at tier L with each member's full source method (not just
+  action: retry with each member's full source method (not just
     the excerpt) as extra context; log the escalation event
 idempotent: true
 resumable: true

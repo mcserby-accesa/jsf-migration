@@ -107,8 +107,9 @@ so they need graph *edges* for traceability, not an EL-style lift.
   source since it usually isn't in the app's own repo); for `kind: "table"`,
   `columns` (list of `{name, type, nullable, primary_key, foreign_key:
   <DB table node id or null>}`), mechanically read from the same catalog
-  introspection pass — this is what a target-side entity mapping (Phase D,
-  sketched in `DECISIONS.md`) derives from, without ever reading DDL by hand.
+  introspection pass — this is what the spec pack's data model ships, and
+  what an implementer derives target entities from without ever reading DDL
+  by hand.
 - `EL`: `attribute` (`rendered`/`disabled`/`required`/`value`/other),
   `raw_expression` (verbatim EL string), `attached_component_id`,
   `attached_screen` (the `SCR` id).
@@ -237,8 +238,8 @@ not how to implement it.
 
 ## LLM steps in Phase A
 
-Four judgment points exist in Phase A, and all four are tier S (see
-`docs/model-tiers.md`):
+Four judgment points exist in Phase A. Each is one bounded call over one
+item (`DECISIONS.md`, principle 4):
 
 - `a2-classify-ambiguous-node`: resolves a node the script couldn't classify
   with certainty (e.g. a `SCR` with no resolvable backing bean, or a
@@ -271,11 +272,11 @@ extraction rather than an implementation-time model reading raw source (see
 
 ## Structural skeletons: page & service
 
-The framework's implementers (Phase D, `d2`/`d3` — sketched in
-`DECISIONS.md`) must never read legacy source directly: `.xhtml` and
-`SVC` class bodies contain exactly the kind of unaudited, untraceable
-content principle 2 already forbids handing to an LLM without going through
-an extractor first. Applied to UI/API structure rather than business logic,
+Whoever implements the replacement must never read legacy source directly:
+`.xhtml` and `SVC` class bodies contain exactly the kind of unaudited,
+untraceable content principle 2 already forbids handing to an LLM without
+going through an extractor first. Applied to UI/API structure rather than
+business logic,
 that means the skeletons extracted above — `SCR.form_fields`/`field_groups`/
 `data_tables`/`ajax_bindings`/`converters_validators`, and `SVC.public_methods`
 with its param/return/scope facts — are not optional convenience data; they
@@ -295,20 +296,19 @@ file an artifact":
 2. **Structural facts that cross the frontend/backend seam must be shared,
    not independently re-derived.** A `data_tables` entry's `pagination.
    page_size` is both an Angular table config and a query-parameter default
-   on the endpoint contract Phase D derives for that table's `row_source`
-   method (see `DECISIONS.md`, Phase D sketch). Extracting it once, here,
-   and threading it through both derivations is what prevents a page that
-   paginates at 10 from hitting an endpoint that doesn't.
+   on the REST API contract Phase C derives for that table's `row_source`
+   method (see `docs/spec-pack.md`). Extracting it once, here, and threading
+   it through both derivations is what prevents a page that paginates at 10
+   from hitting an endpoint that doesn't.
 
-What this framework does **not** attempt: pixel/visual fidelity (spacing,
-component-library styling) is deliberately not extracted here — that is
-`d0`'s decision, made once as part of the target architecture, not a
-per-page structural fact. `layout_fidelity` and `service_boundary_fidelity`
-(specified in `DECISIONS.md`'s Phase D sketch, not yet in `framework.yaml` —
-see there for why) govern whether Phase D's
-verification *enforces* an exact structural match against these skeletons —
-they never gate whether Phase A *extracts* them, since extraction is
-mechanical and cheap regardless of which fidelity mode an engagement picks.
+What this framework does **not** attempt: pixel/visual fidelity — spacing,
+component-library choice, styling — is deliberately not extracted. That is a
+target-architecture decision belonging to whoever builds the replacement, not
+a per-page structural fact about the legacy app. Nor does the framework check
+whether a rebuild preserves the extracted structure; it has no standing to
+(`DECISIONS.md`, "Structural fidelity is the implementer's call"). Extraction
+here is unconditional either way, since it is mechanical and cheap regardless
+of what anyone later does with it.
 
 ## Phase A exit gate — `a5-validate-inventory`
 

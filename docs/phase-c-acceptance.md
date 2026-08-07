@@ -11,7 +11,7 @@ Phase C requires a behavior that has passed Phase B's boundary/sizing/
 completeness gates, and a `risk_tier` assigned per `docs/phase-b-behaviors.md`
 ("Risk tier").
 
-## Step 1 — Derive acceptance criteria (`c1`, tier M)
+## Step 1 — Derive acceptance criteria (`c1`)
 
 Input: one behavior's confirmed node set plus the `legacy_refs` excerpts for
 those nodes (bounded — this is "one behavior," not "the codebase"). Output:
@@ -27,7 +27,7 @@ ACs are written into the behavior's scenario table per
 `templates/BHV-template.md` — this is the only place ACs live; nothing
 downstream re-derives or re-authors them.
 
-## Step 2 — Decision tables for compound logic (`c2`, tier M) and pairwise reduction (`c2b`, script)
+## Step 2 — Decision tables for compound logic (`c2`) and pairwise reduction (`c2b`, script)
 
 Plain Given/When/Then ACs represent single-condition branches well but lose
 information about **compound boolean conditions** — CC counts a compound
@@ -36,7 +36,7 @@ that actually need distinct test cases to prove each condition
 independently affects the outcome. For any `rule` behavior (or any behavior
 node) with a compound condition:
 
-1. `c2` (tier M, one rule/condition per call) proposes the full decision
+1. `c2` (one rule/condition per call) proposes the full decision
    table: one row per condition combination relevant to MC/DC coverage of
    that specific expression, with the expected outcome and its
    `legacy_refs`.
@@ -81,7 +81,7 @@ actually exercise what the legacy system actually does," which is a
 fundamentally different (and stronger) question than "did I re-read the code
 carefully enough."
 
-## Step 5 — Triage uncovered branches (`c5`, tier S), risk-tiered
+## Step 5 — Triage uncovered branches (`c5`), risk-tiered
 
 Input: **one enclosing method or class's** worth of uncovered branches at
 once, **hard capped at 6 per call** — file:line, surrounding code context,
@@ -93,14 +93,14 @@ classifying them together costs the same tokens as one branch alone would,
 at a fraction of the call count, with zero loss of completeness — batching
 is tried before any coverage is sacrificed. The cap exists because batching
 without one just relocates the volume problem into a different failure
-mode: past a handful of branches in one call, a tier-S model's judgment on
+mode: past a handful of branches in one call, the model's judgment on
 a later branch risks anchoring on an earlier one in the same batch,
 producing a fluent, schema-valid, wrong classification — exactly what
-`docs/model-tiers.md`'s bounded-input discipline exists to prevent. A
+the framework's bounded-input discipline exists to prevent. A
 method/class with more than 6 uncovered branches is pre-split by the
 orchestrator into multiple sub-batches (by ascending line number), the same
 mechanical-pre-split principle as `b3`'s neighborhood cap, never solved by
-raising the tier.
+using a bigger model.
 
 **Not every behavior's uncovered branches get triaged individually.** A
 behavior's `risk_tier` (`docs/phase-b-behaviors.md`, "Risk tier") decides how
@@ -121,7 +121,7 @@ much of `c5`'s output this step is exigent about:
 
 An unconditional 100%-of-everything gate looks rigorous and gets quietly
 ignored in practice on a real application's branch count (REVIEW.md §1.2);
-this tiering is meant to be a gate that is actually enforced, at the cost of
+this risk tiering is meant to be a gate that is actually enforced, at the cost of
 being calibrated rather than absolute.
 
 For whichever branches are triaged, output is a classification, exactly one
@@ -200,6 +200,11 @@ A behavior does not exit Phase C until `c6` passes. See
 
 Test harnesses, fixtures, seed-data wiring for the *new* system, or CI
 pipeline configuration. Phase C's contract ends at a validated, rendered
-spec plus a coverage-backed triage log — turning that into a running test
-suite in the new stack is Phase D, out of scope for this framework (see
-`README.md`).
+spec, a coverage-backed triage log, and the derived API contract. Anything
+built on top of those belongs to whoever implements the replacement, which
+this framework does not do (see `DECISIONS.md`).
+
+Note also what Phase C cannot reach: at the default `legacy_test_seam:
+service`, `c4` never renders a page, so EL and navigation rules extracted in
+Phase A are specified here but executed by nothing. Validating those is
+Phase D's job — see `DECISIONS.md`.

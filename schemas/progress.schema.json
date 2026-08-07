@@ -1,0 +1,58 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "progress.schema.json",
+  "title": "spec-pack behaviors/progress.jsonl — implementation progress log (one entry per line)",
+  "description": "Append-only coordination log for whoever implements the pack, including multi-agent implementers. This framework DEFINES THE SHAPE AND WRITES NOTHING. c9 seeds the file empty and excludes it from every regeneration and hash check — it is the one mutable file in the pack, owned entirely by the implementer. Current state is derived by replaying entries in order, not by mutating a record: concurrent writers appending is safe, whereas concurrent writers rewriting a mutable JSON file silently lose claims. Same discipline as nodes.jsonl/edges.jsonl. Deliberately absent: CI config, branching model, review gates, sprint structure, agent prompts — the substrate is specified, the process is not.",
+  "type": "object",
+  "required": ["ts", "bhv_id", "event", "actor"],
+  "additionalProperties": false,
+  "properties": {
+    "ts": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO-8601, UTC. Ordering key when replaying. Ties broken by file line order."
+    },
+    "bhv_id": { "type": "string", "pattern": "^BHV-[0-9]{4,}$" },
+    "part": {
+      "type": "string",
+      "description": "Optional sub-unit within the behavior, if the implementer splits work further (e.g. 'api', 'ui', 'tests'). This framework deliberately does not define the split — the vocabulary is the implementer's, because how a behavior divides across a stack is a property of that stack, not of the legacy app."
+    },
+    "event": {
+      "type": "string",
+      "enum": ["claimed", "released", "started", "blocked", "unblocked", "done", "abandoned", "note"],
+      "description": "claimed: this actor intends to work it (the mutual-exclusion primitive). released: claim given up without progress. started/done: work boundaries. blocked/unblocked: paused on an external dependency. abandoned: will not be done, needs a reason. note: free commentary, no state change."
+    },
+    "actor": {
+      "type": "string",
+      "description": "Who emitted this — an agent id, a username, a CI job. Required on every entry so a claim is always attributable."
+    },
+    "lease_expires": {
+      "type": "string",
+      "format": "date-time",
+      "description": "For 'claimed': when the claim lapses if no further entry appears. Without this, a crashed agent's claim blocks a behavior forever. A replayer treats an expired claim as released. Choose a duration longer than a realistic unit of work."
+    },
+    "reason": {
+      "type": "string",
+      "description": "Required for 'blocked' and 'abandoned'. An abandoned behavior with no reason is indistinguishable from a dropped one, which is exactly the silent-loss failure this framework exists to prevent."
+    },
+    "blocked_on": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "For 'blocked': BHV ids, or free-text external blockers."
+    },
+    "ref": {
+      "type": "string",
+      "description": "Optional pointer to where the work landed — a commit, PR, or branch. Not interpreted by anything here."
+    }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "event": { "enum": ["blocked", "abandoned"] } }, "required": ["event"] },
+      "then": { "required": ["reason"] }
+    },
+    {
+      "if": { "properties": { "event": { "const": "claimed" } }, "required": ["event"] },
+      "then": { "required": ["lease_expires"] }
+    }
+  ]
+}

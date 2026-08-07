@@ -1,0 +1,52 @@
+id: c7-derive-endpoint-contracts
+phase: C
+kind: script
+description: >
+  Mechanically derive one OpenAPI operation fragment per public method on
+  every active SVC node, from the service skeleton plus the application's
+  api-conventions.yaml. Resource name, path, verb, parameters, request and
+  response schemas, status codes and security are all computed by rule —
+  nothing is judged here. Any method the rules cannot decide outright is
+  emitted with mapped: false and a reason, and routed to c8; it is never
+  guessed at by this step.
+input:
+  type: all_service_nodes
+  source: >
+    nodes.jsonl (active SVC nodes with public_methods, active DB nodes with
+    columns, active SCR nodes' data_tables for pagination defaults, active
+    AUTHZ nodes for role requirements) + the application's api-conventions.yaml
+  fields: [svc_nodes, db_nodes, scr_data_tables, authz_nodes, api_conventions]
+  bound: not applicable (deterministic script over the whole graph)
+output_schema: schemas/c7-derive-endpoint-contracts.schema.json
+validators:
+  - api-conventions.yaml is present and every required key is set; a missing
+    or partial conventions file FAILS this step rather than defaulting
+  - every emitted operation's path is built from api_conventions
+    (base_path, path_case, resource_number, strip_suffixes) — never from a
+    literal legacy class or method name
+  - every request/response schema field resolves to a real DB node column or
+    a real method param/return type; no invented fields
+  - a data_tables-backed collection operation uses that table's extracted
+    page_size, NOT api_conventions.default_page_size (the extracted value
+    wins — docs/phase-a-inventory.md, "Structural skeletons")
+  - roles are copied from the AUTHZ nodes that RESTRICT the owning SVC when
+    api_conventions.carry_legacy_roles is true; never inferred
+  - every SVC method appears exactly once in the output, either as a mapped
+    operation or as an unmapped entry with a reason
+escalate:
+  trigger: not applicable
+  action: >
+    a rule that cannot decide is not an error — it emits mapped: false with
+    a reason and is resolved by c8. A crash, a missing conventions key, or an
+    unresolvable type reference IS an error and blocks the step.
+idempotent: true
+resumable: true
+notes: >
+  This step exists as a script, ahead of any model call, because principle 2
+  applies to the API surface exactly as it applies to inventory: the rules in
+  api-conventions.yaml decide the overwhelming majority of operations
+  outright, and routing those through a model would be a slower, less
+  reliable way to apply a lookup table. c8 sees only the residue.
+
+  The output is fragments, not a merged document — merging is c9's, so that
+  re-deriving one service does not rewrite the whole OpenAPI file.

@@ -1,6 +1,6 @@
 # Prompt: c2-build-decision-table
 
-Tier: M. Step contract: `steps/c2-build-decision-table.yaml`. Output
+Step contract: `steps/c2-build-decision-table.yaml`. Output
 schema: `schemas/c2-build-decision-table.schema.json`.
 
 ## System / instruction text

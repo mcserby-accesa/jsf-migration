@@ -1,6 +1,6 @@
 # Prompt: b2-confirm-rule-behavior
 
-Tier: M. Step contract: `steps/b2-confirm-rule-behavior.yaml`. Output
+Step contract: `steps/b2-confirm-rule-behavior.yaml`. Output
 schema: `schemas/b2-confirm-rule-behavior.schema.json`.
 
 ## System / instruction text
@@ -94,5 +94,5 @@ Expected output:
 
 - Confidence below 0.5, as in example 2, combined with a low
   `similarity_score` from `b1`, is a reasonable candidate for the
-  escalation path in `steps/b2-confirm-rule-behavior.yaml` (retry at tier L
+  escalation path in `steps/b2-confirm-rule-behavior.yaml` (retry
   with each member's full source method, not just the excerpt).

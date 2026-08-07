@@ -40,16 +40,16 @@ of absorb.
 Seeded directly from one inventory node (`SCR`/`PROC`/`JOB`/etc.) plus its
 **bounded local subgraph**: outgoing/incoming edges up to 2 hops, hard cap.
 If the 2-hop neighborhood exceeds what fits in one bounded LLM call (see
-`docs/model-tiers.md` on input bounding), the neighborhood is pre-split
+`DECISIONS.md` principle 4 on input bounding), the neighborhood is pre-split
 mechanically — e.g. by edge type, drafting the "screen + its rule gates" and
 the "screen + its downstream service calls" as separate candidate boundaries
 for the same seed node — before the LLM ever sees it, rather than raising the
-tier.
+a bigger model.
 
-`steps/b3-draft-behavior-boundary.yaml` (tier M) proposes: which nodes in the
+`steps/b3-draft-behavior-boundary.yaml` proposes: which nodes in the
 bounded neighborhood belong inside this behavior's scope, the taxonomy tag,
 and a rough AC-count estimate used by the sizing check. `steps/b4-write-
-behavior-spec.yaml` (tier M) then drafts the actual `BHV-####.md` body
+behavior-spec.yaml` then drafts the actual `BHV-####.md` body
 (description, scenario stubs with `legacy_refs`) from the confirmed boundary
 — see `templates/BHV-template.md` for the exact structure it must fill in.
 
@@ -89,7 +89,7 @@ directly. Instead:
    clone-detection/AST-similarity tool scans `SVC` method bodies and `EL`-
    lifted `RULE` stubs for near-duplicate logic, producing candidate clusters
    of 2–5 nodes each with a similarity score.
-2. `steps/b2-confirm-rule-behavior.yaml` (tier M): given **one candidate
+2. `steps/b2-confirm-rule-behavior.yaml`: given **one candidate
    cluster** (the 2–5 snippets and their node IDs — bounded, not "the
    codebase"), confirm it as a genuine shared rule behavior, reject it as a
    coincidental similarity, or flag it for a split (some members belong, some
@@ -97,7 +97,7 @@ directly. Instead:
 
 This is the general pattern for any step that looks like it needs global
 reasoning: reduce mechanically first, confirm per-candidate second. See
-`docs/model-tiers.md`.
+each step's `escalate:` block.
 
 Confirmed rule clusters proceed through `b4` the same as any other behavior
 draft, tagged `rule`, with `DERIVED_FROM`/`GUARDS` edges already present from

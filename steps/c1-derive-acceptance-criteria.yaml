@@ -1,6 +1,6 @@
 id: c1-derive-acceptance-criteria
 phase: C
-tier: M
+kind: llm
 description: >
   Derive the acceptance-criteria list for one behavior from its confirmed
   node set and legacy_refs excerpts. Every AC must cite legacy evidence; a
@@ -21,7 +21,7 @@ validators:
 escalate:
   trigger: 3 consecutive schema-validation failures, OR fewer than 1 AC
     produced for a behavior with ΣCC >= 5
-  action: retry at tier L with full (non-excerpted) legacy source for the
+  action: retry with full (non-excerpted) legacy source for the
     behavior's covered nodes; log the escalation event
 idempotent: true
 resumable: true

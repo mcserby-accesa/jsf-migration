@@ -1,6 +1,6 @@
 id: c6-validate-acceptance-spec
 phase: C
-tier: script
+kind: script
 description: >
   Deterministic exit gate for Phase C on one behavior: legacy_refs
   resolution on every AC/decision-table row, rendered-output existence and
@@ -18,7 +18,7 @@ escalate:
   trigger: not applicable
   action: >
     a failure blocks Phase C sign-off for this behavior; fixed by routing
-    back to c1/c2/c5 as appropriate, never by escalating a model tier
+    back to c1/c2/c5 as appropriate
 idempotent: true
 resumable: true
 notes: >

@@ -1,6 +1,6 @@
 # Prompt: c5-triage-uncovered-branch
 
-Tier: S. Step contract: `steps/c5-triage-uncovered-branch.yaml`. Output
+Step contract: `steps/c5-triage-uncovered-branch.yaml`. Output
 schema: `schemas/c5-triage-uncovered-branch.schema.json`.
 
 ## System / instruction text

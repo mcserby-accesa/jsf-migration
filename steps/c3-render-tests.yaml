@@ -1,6 +1,6 @@
 id: c3-render-tests
 phase: C
-tier: script
+kind: script
 description: >
   Deterministically render one behavior's ACs and decision tables into
   framework.yaml:spec_format (gherkin | junit | both), per the mapping
@@ -17,12 +17,12 @@ validators:
   - re-rendering the same unchanged BHV-####.md produces byte-identical
     output (idempotence)
   - every AC/decision-table row in the source BHV is accounted for by the
-    rendered output: either it has its own rendered scenario/test method,
+    rendered output — either it has its own rendered scenario/test method,
     OR its decision_table_ref is non-empty and that table's own rendered
     Scenario Outline/@ParameterizedTest exists (per
     templates/renderers/*.md rule "decision_table_ref rows are not
     independently rendered") — a row satisfying neither is a silent drop
-    (this is D4's fix: a row with a non-empty decision_table_ref used to be
+    (this is D4's fix — a row with a non-empty decision_table_ref used to be
     ambiguous between "rendered on its own" and "rendered via its table,"
     and the renderers resolved it inconsistently by hand)
   - if spec_format is "both", gherkin and junit outputs reference the same

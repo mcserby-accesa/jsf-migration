@@ -1,6 +1,6 @@
 id: b4-write-behavior-spec
 phase: B
-tier: M
+kind: llm
 description: >
   Draft the BHV-####.md body (description, scenario stubs with
   legacy_refs) from a confirmed node boundary (output of b3, or a confirmed
@@ -23,7 +23,7 @@ idempotent: true
 resumable: true
 escalate:
   trigger: 3 consecutive schema-validation failures
-  action: retry at tier L with the full source text (not excerpts) of each
+  action: retry with the full source text (not excerpts) of each
     confirmed node's legacy_refs span; log the escalation event
 notes: >
   This step drafts scenario STUBS, not final acceptance criteria — c1 in

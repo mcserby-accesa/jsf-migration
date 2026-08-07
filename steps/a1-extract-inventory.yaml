@@ -1,6 +1,6 @@
 id: a1-extract-inventory
 phase: A
-tier: script
+kind: script
 description: >
   Run every deterministic extractor (Java AST scan, view/bean pair scan,
   EL expression scan, faces-config.xml parse, BPMN XML parse, DB catalog
@@ -14,7 +14,7 @@ input:
   source: the legacy application's source tree + booted DB catalog (Phase 0 gate passed)
   bound: whole-repo scan is expected here — this is the one step in the
     pipeline that is NOT bounded to one file/node, because it is a script,
-    not an LLM call. The "bounded input" constraint in docs/model-tiers.md
+    not an LLM call. The "bounded input" constraint documented in DECISIONS.md
     applies only to LLM steps.
 output_schema: schemas/a1-extract-inventory.schema.json
 validators:

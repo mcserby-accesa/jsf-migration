@@ -1,6 +1,6 @@
 # Prompt: b4-write-behavior-spec
 
-Tier: M. Step contract: `steps/b4-write-behavior-spec.yaml`. Output schema:
+Step contract: `steps/b4-write-behavior-spec.yaml`. Output schema:
 `schemas/b4-write-behavior-spec.schema.json` (which itself extends
 `schemas/bhv.schema.json`). Structure reference: `templates/BHV-template.md`.
 
@@ -110,7 +110,7 @@ accept one scenario as sufficient for a job with unknown side effects.
 ## Notes for the orchestrator
 
 - A behavior drafted from a boundary this thin is a candidate for
-  escalation (tier L, full non-excerpted source) specifically because the
+  escalation (retry with full non-excerpted source) specifically because the
   scenario count is suspiciously low relative to the node's apparent
   complexity — this is the kind of signal the escalation policy in
-  `docs/model-tiers.md` exists to catch.
+  the bounded-input discipline exists to catch.

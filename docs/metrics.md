@@ -120,13 +120,13 @@ is trusted.
 
 **Threshold:** > 20%.
 
-**Action:** flag the step's tier assignment in `docs/model-tiers.md` for
-review. This is the mechanism that lets the tier table be corrected
-empirically after a pilot — a step declared tier S that escalates on one in
-five calls is either mis-scoped (its "bounded input" is actually not bounded
-enough) or genuinely needs tier M, and the escalation log (see
-`docs/model-tiers.md`) is read specifically to distinguish those two cases,
-not to auto-promote the tier.
+**Action:** flag the step's input bounding for review. A step that escalates
+on one in five calls is almost always mis-scoped — its "bounded input" is not
+actually bounded enough, or its prompt is asking for more than one judgment.
+Fix the step, not the model: reaching for a larger model here hides the
+defect rather than correcting it, and leaves the step just as fragile on the
+next application. The escalation log exists to identify *which* input shapes
+trip the step, which is what tells you where to split it.
 
 ## 7. Spec-defect rate (human review)
 
@@ -145,10 +145,9 @@ LLM step's judgment was actually correct (REVIEW.md §1.3). It exists to be
 watched, not thresholded, until a pilot establishes what rate is normal.
 
 **Action:** a rate that is non-trivial and not trending down after repeated
-correction is evidence the step's prompt/context (not just its tier) is
-mis-scoped — feed it back into `docs/model-tiers.md` and the relevant
-`prompts/*.md`, the same way the escalation-rate metric (#6) feeds back into
-tier assignment.
+correction is evidence the step's prompt or context is mis-scoped — feed it
+back into the relevant `prompts/*.md`, the same way the escalation-rate
+metric (#6) feeds back into how a step is bounded.
 
 ## Metrics considered and deliberately not included
 

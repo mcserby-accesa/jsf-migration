@@ -1,0 +1,91 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "c7-derive-endpoint-contracts.schema.json",
+  "title": "c7-derive-endpoint-contracts output",
+  "type": "object",
+  "required": ["conventions_hash", "operations", "unmapped"],
+  "additionalProperties": false,
+  "properties": {
+    "conventions_hash": {
+      "type": "string",
+      "description": "Hash of the api-conventions.yaml this run consumed. Recorded so a pack can prove which conventions produced its API, and so a conventions change forces a re-derive rather than silently mixing two vintages."
+    },
+    "operations": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/operation" }
+    },
+    "unmapped": {
+      "type": "array",
+      "description": "Methods the rules could not decide. Each is routed to c8. Never guessed at here.",
+      "items": {
+        "type": "object",
+        "required": ["svc_id", "method_name", "reason"],
+        "additionalProperties": false,
+        "properties": {
+          "svc_id": { "type": "string", "pattern": "^SVC-[0-9]{4,}$" },
+          "method_name": { "type": "string" },
+          "reason": {
+            "type": "string",
+            "enum": [
+              "no_verb_prefix_match",
+              "not_crud_shaped",
+              "ambiguous_resource",
+              "unresolvable_type"
+            ]
+          },
+          "detail": { "type": "string" }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "operation": {
+      "type": "object",
+      "required": ["svc_id", "method_name", "path", "verb", "derivation", "openapi_fragment"],
+      "additionalProperties": false,
+      "properties": {
+        "svc_id": { "type": "string", "pattern": "^SVC-[0-9]{4,}$" },
+        "method_name": { "type": "string" },
+        "path": { "type": "string", "pattern": "^/" },
+        "verb": { "type": "string", "enum": ["get", "post", "put", "patch", "delete"] },
+        "derivation": {
+          "type": "string",
+          "enum": ["mechanical", "llm"],
+          "description": "How this operation was decided. c7 emits only 'mechanical'; c8's output is merged in as 'llm'. The distinction is kept in the pack so a reviewer can see exactly which endpoints involved judgment."
+        },
+        "action_sub_resource": {
+          "type": "boolean",
+          "description": "True when the operation is a non-CRUD action rendered per api_conventions.action_style rather than forced onto a CRUD verb."
+        },
+        "pagination": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "page_size": { "type": "integer", "minimum": 1 },
+            "page_size_source": {
+              "type": "string",
+              "enum": ["extracted_from_screen", "conventions_default"],
+              "description": "extracted_from_screen means a SCR data_tables entry supplied it and therefore wins over the conventions default — this is the seam-crossing fact that keeps a page paginating at 10 from hitting an endpoint defaulting to 20."
+            },
+            "source_screen": { "type": "string" }
+          }
+        },
+        "roles": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Copied verbatim from AUTHZ nodes restricting this SVC, when carry_legacy_roles is true. Never inferred."
+        },
+        "legacy_refs": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string" },
+          "description": "The service method this operation was derived from. An operation with no legacy_refs is invented, not derived."
+        },
+        "openapi_fragment": {
+          "type": "object",
+          "description": "A standalone OpenAPI operation object, merged into the application document by c9."
+        }
+      }
+    }
+  }
+}

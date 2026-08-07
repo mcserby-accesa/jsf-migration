@@ -1,6 +1,6 @@
 # Prompt: b3-draft-behavior-boundary
 
-Tier: M. Step contract: `steps/b3-draft-behavior-boundary.yaml`. Output
+Step contract: `steps/b3-draft-behavior-boundary.yaml`. Output
 schema: `schemas/b3-draft-behavior-boundary.schema.json`.
 
 ## System / instruction text
@@ -120,4 +120,4 @@ Expected output:
 
 - `needs_prereduction: true` routes back to a mechanical split of the
   neighborhood (e.g. by edge type or by downstream node's own taxonomy),
-  producing several narrower `b3` calls — it does not raise the tier.
+  producing several narrower `b3` calls — never by using a bigger model.

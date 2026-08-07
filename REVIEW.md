@@ -9,6 +9,14 @@ pilot data was available, so every claim here is either a document-internal
 inconsistency (verified, cited) or a predicted failure mode (labelled as
 such).
 
+> **Historical document.** Parts of it have since been acted on and parts
+> reversed. Two things it discusses at length no longer exist: **Phase D as
+> implementation** (§5 — superseded, see the banner there) and the **model
+> tier system** (`docs/model-tiers.md`, tier S/M/L per step — deleted;
+> steps now declare only `kind: llm` or `kind: script`, and model choice
+> belongs to the implementing team). References to either are stale by
+> design. **`DECISIONS.md` is authoritative on what is settled.**
+
 The purpose of this document is to drive iteration on the framework. It is
 organised so it can be worked as a checklist: structural problems first,
 then verified defects, then a prioritised change list.
@@ -516,6 +524,15 @@ Do not apply the framework to several migrations until the pilot completes.
 ---
 
 ## 5. Phase D — implementation from the spec pack
+
+> **SUPERSEDED — this entire section describes a design that was reversed.**
+> Implementation is out of scope again; Phase D is now spec validation
+> (browser-driven tests against the *legacy* app). `d0`–`d6`,
+> `target_test_seam`, `layout_fidelity`, and `service_boundary_fidelity` do
+> not exist. The endpoint-contract derivation (§5.6's `d1b`) survived and
+> moved into Phase C — see `docs/spec-pack.md`. This section is kept as the
+> record of what was considered and why it was dropped. **`DECISIONS.md` is
+> authoritative on what is settled; this file is not.**
 
 **Decision taken (2026-08-07):** Phase D is brought into scope, and its
 shape changes. It is *not* "build a test harness for the new stack."

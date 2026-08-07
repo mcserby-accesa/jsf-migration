@@ -1,11 +1,11 @@
 id: b1-detect-rule-similarity-candidates
 phase: B
-tier: script
+kind: script
 description: >
   Mechanical pre-reduction for reusable-rule discovery. Runs clone/AST-
   similarity detection across SVC method bodies and EL-lifted RULE stubs,
   producing candidate clusters of 2-5 near-duplicate nodes with a
-  similarity score. This is what keeps b2 a bounded, tier-M-shaped step
+  similarity score. This is what keeps b2 a bounded, single-judgment step
   instead of "read the codebase and find duplication," which no step in
   this framework is allowed to ask a model to do directly.
 input:

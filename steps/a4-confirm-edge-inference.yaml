@@ -1,6 +1,6 @@
 id: a4-confirm-edge-inference
 phase: A
-tier: S
+kind: llm
 description: >
   Resolve one candidate edge that static analysis could not pin to exactly
   one target node (dynamic dispatch, dependency-injected interfaces,
@@ -23,7 +23,7 @@ validators:
 escalate:
   trigger: 3 consecutive schema-validation failures, OR "multiple" chosen
     twice in a row for the same edge across retries
-  action: retry at tier M with each candidate target's public method
+  action: retry with each candidate target's public method
     signatures added as extra context; log the escalation event
 idempotent: true
 resumable: true

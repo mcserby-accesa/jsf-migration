@@ -1,6 +1,6 @@
 id: a3-lift-el-expression
 phase: A
-tier: S
+kind: llm
 description: >
   Turn one raw EL node (a rendered/disabled/required/value expression, or a
   BPMN gateway condition_expr) into a plain-language rule description and a
@@ -23,7 +23,7 @@ validators:
   - confidence field present and in [0,1]
 escalate:
   trigger: 3 consecutive schema-validation failures, OR confidence < 0.5 twice
-  action: retry at tier M with the attached screen's full form_fields list as
+  action: retry with the attached screen's full form_fields list as
     extra context; log the escalation event
 idempotent: true
 resumable: true

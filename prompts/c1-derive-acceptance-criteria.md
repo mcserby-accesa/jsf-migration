@@ -1,6 +1,6 @@
 # Prompt: c1-derive-acceptance-criteria
 
-Tier: M. Step contract: `steps/c1-derive-acceptance-criteria.yaml`. Output
+Step contract: `steps/c1-derive-acceptance-criteria.yaml`. Output
 schema: `schemas/c1-derive-acceptance-criteria.schema.json`.
 
 ## System / instruction text

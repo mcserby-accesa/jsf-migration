@@ -1,6 +1,6 @@
 id: a5-validate-inventory
 phase: A
-tier: script
+kind: script
 description: >
   Deterministic exit gate for Phase A. Checks edge endpoint resolution,
   legacy_refs resolution, ID uniqueness, that no node remains
@@ -19,7 +19,7 @@ validators:
 escalate:
   trigger: not applicable
   action: none — a5 failing means Phase A is not done; it blocks progression
-    to Phase B and is fixed by re-running a1-a4, not by escalating a model tier
+    to Phase B and is fixed by re-running a1-a4, not by retrying differently
 idempotent: true
 resumable: true
 notes: >

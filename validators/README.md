@@ -177,16 +177,111 @@ file is the authority on *when it runs*.
   justification is *correct*; correctness is a human review concern.
 - **Output:** `{ "passed": bool, "failures": ["<file:line>: justification missing or boilerplate"] }`.
 - **On failure:** blocks Phase C sign-off for the behavior; route back to
-  `c5` (likely at escalated tier) for that branch.
+  `c5` with more context for that branch.
+
+## `endpoint_contract_complete`
+
+- **Applies to:** `c7`/`c8` output, checked by `c9`.
+- **Reads:** every active `SVC` node's `public_methods`, `c7`'s `operations`
+  and `unmapped` lists, and every `c8` resolution.
+- **Checks:** every public method reaches exactly one final state — a mapped
+  operation, or `no_endpoint` with reasoning. Zero methods remain in
+  `unmapped` unresolved, and zero are `needs_human_contract`.
+- **Output:** `{ "passed": bool, "failures": ["<SVC id>.<method>: <state>"] }`.
+- **On failure:** blocks pack handover. A `needs_human_contract` entry is
+  resolved by a human authoring that one operation, or by supplying the
+  missing type facts and re-running `c8` — never by letting `c8` guess.
+
+## `openapi_merge_consistent`
+
+- **Applies to:** the merged `api/openapi.yaml`, checked by `c9`.
+- **Reads:** every operation fragment from `c7`/`c8`.
+- **Checks:** no two fragments claim the same path + verb; every `$ref`
+  resolves within the merged document; every referenced schema component is
+  defined exactly once; the merge is order-independent (sorting the fragments
+  differently produces a byte-identical document).
+- **Output:** `{ "passed": bool, "failures": ["<path> <verb>: <collision or dangling ref>"] }`.
+- **On failure:** blocks pack handover. A path collision usually means two
+  legacy services map onto one resource name — fix `strip_suffixes` or the
+  resource derivation in `api-conventions.yaml`, not the generated file.
+
+## `bpmn_copied_verbatim`
+
+- **Applies to:** every file under the pack's `process/`, checked by `c9`.
+- **Reads:** the copied `.bpmn` files and their legacy source files.
+- **Checks:** byte-identical, hash for hash. No reformatting, no
+  namespace normalization, no pretty-printing.
+- **Output:** `{ "passed": bool, "failures": ["<file>: hash mismatch with <source>"] }`.
+- **On failure:** blocks pack handover. The pack ships what was discovered;
+  a "helpfully" reformatted process definition is no longer the artifact the
+  legacy engine actually runs.
+
+## `projection_regenerates_identically`
+
+- **Applies to:** every pack part with `kind: "projection"`, checked by `c9`.
+- **Reads:** the written projection and its declared `source`.
+- **Checks:** regenerating the projection from its source produces a
+  byte-identical file. Same discipline as `rendering_idempotent`, applied to
+  the whole pack.
+- **Output:** `{ "passed": bool, "failures": ["<path>: differs from regeneration"] }`.
+- **On failure:** blocks pack handover. Two causes, both real: the generator
+  is non-deterministic (fix the generator), or someone hand-edited a
+  projection (discard the edit and change the original instead). A pack whose
+  projections don't regenerate has two copies of some fact and no way to say
+  which is authoritative.
+
+## `no_legacy_source_in_pack`
+
+- **Applies to:** the assembled pack, checked by `c9`.
+- **Reads:** every file in the pack.
+- **Checks:** no `.xhtml`, `.java`, `.jsp`, or other legacy source file has
+  been copied in. `.bpmn` files are the one deliberate exception — they are a
+  carried-over artifact, not source to be read in place of a spec.
+- **Output:** `{ "passed": bool, "failures": ["<path>: legacy source in pack"] }`.
+- **On failure:** blocks pack handover. If something in the pack is missing a
+  fact that only the source has, extend the Phase A extractor that should
+  have captured it. See `DECISIONS.md`, principle 5.
+
+## `dependency_order_derivable`
+
+- **Applies to:** `behaviors/order.json`, checked by `c9`.
+- **Reads:** `order.json`, `nodes.jsonl`, `edges.jsonl`.
+- **Checks:** every behavior in the pack appears exactly once; every
+  `depends_on` entry cites at least one real edge present in `edges.jsonl`;
+  every behavior in a `cycle_group` is listed in the `cycles` array and vice
+  versa; `wave` values are consistent with the condensed dependency graph
+  (nothing depends on something in a later wave); `generated_from` hashes
+  match the graph actually in the pack.
+- **Output:** `{ "passed": bool, "failures": ["<bhv id>: <inconsistency>"] }`.
+- **On failure:** blocks pack handover. A cycle is **not** a failure — an
+  unreported cycle is. The generator never breaks one; a stale
+  `generated_from` hash means the order was derived against a different graph
+  and must be regenerated before anyone schedules against it.
+
+## `spec_pack_complete`
+
+- **Applies to:** the assembled pack, checked by `c9` as the framework's
+  final gate.
+- **Reads:** `manifest.json` and the pack contents.
+- **Checks:** (1) every active inventory node is covered by a behavior or
+  recorded out-of-scope with a reason (re-checks `inventory_coverage_complete`);
+  (2) every behavior present passed `c6`; (3) every ID referenced anywhere in
+  the pack resolves within the pack; (4) `manifest.json` lists every file
+  present and every file it lists exists; (5) each of the validators above
+  passed.
+- **Output:** `{ "passed": bool, "failures": ["<check>: <detail>"] }`.
+- **On failure:** the pack is not handed over. See `docs/spec-pack.md`,
+  "Completeness gate" — a partial pack presented as a complete one is the one
+  failure that discredits every phase upstream of it.
 
 ## Cross-cutting: escalation-rate monitoring
 
 - **Applies to:** the escalation event log described in
-  `docs/model-tiers.md`.
+  each step's `escalate:` block.
 - **Reads:** the last 20 calls to a given step.
 - **Checks:** `count(escalated) / 20 > 0.2`.
 - **Output:** `{ "step": "...", "escalation_rate": number, "flagged": bool }`.
 - **On failure (flagged: true):** not a blocker for any single behavior —
-  it flags the step's tier assignment in `docs/model-tiers.md` for human
-  review, to correct the tier table empirically after a pilot. See
+  it flags the step's input bounding for human
+  review, to correct the step's input bounding empirically after a pilot. See
   `docs/metrics.md`, "Escalation rate per step."

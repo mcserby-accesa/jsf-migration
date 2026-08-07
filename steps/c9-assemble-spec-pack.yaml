@@ -1,0 +1,64 @@
+id: c9-assemble-spec-pack
+phase: C
+kind: script
+description: >
+  Assemble the spec pack (docs/spec-pack.md): copy the originals, generate
+  every projection, merge c7/c8's operation fragments into one OpenAPI
+  document, copy the .bpmn files byte-identically, derive
+  behaviors/order.json, seed an empty behaviors/progress.jsonl, write
+  manifest.json and the generated README index, then run the
+  spec_pack_complete gate. This is the framework's terminal step — its
+  output is the deliverable.
+input:
+  type: whole_application
+  source: >
+    nodes.jsonl, edges.jsonl, every BHV-####.md that passed c6, c3's rendered
+    tests, the application triage log, c7/c8's operation fragments, the legacy
+    repository's .bpmn files, framework.yaml, api-conventions.yaml
+  bound: not applicable (deterministic script over the whole application)
+output_schema: schemas/c9-assemble-spec-pack.schema.json
+validators:
+  - spec_pack_complete
+  - projection_regenerates_identically
+  - bpmn_copied_verbatim
+  - openapi_merge_consistent
+  - endpoint_contract_complete
+  - dependency_order_derivable
+  - no_legacy_source_in_pack
+order_derivation:
+  description: >
+    behaviors/order.json (schemas/order.schema.json) is a projection of the
+    graph, not a plan. Behavior X depends on behavior Y when a node X covers
+    has an edge to a node Y covers, and X != Y. Edge types treated as
+    dependencies: INVOKES, READS, WRITES, RENDERS, STARTS, SCHEDULES —
+    recorded in the output so the derivation is auditable. Cycles are
+    condensed into cycle_groups and reported, NEVER broken by the generator;
+    a cycle in a legacy application is a real finding, and choosing where to
+    cut it is a human decision. wave is longest-path depth over the condensed
+    graph: everything in one wave can be worked concurrently.
+  progress_file: >
+    behaviors/progress.jsonl (schemas/progress.schema.json) is seeded EMPTY
+    and is the one mutable file in the pack. It is excluded from
+    projection_regenerates_identically, from every hash in manifest.json, and
+    from the completeness gate — this framework defines its shape and writes
+    nothing into it. Append-only, because concurrent agents appending is safe
+    where concurrent agents rewriting a mutable file silently drops claims.
+escalate:
+  trigger: not applicable
+  action: >
+    a gate failure blocks handover and names the missing or inconsistent
+    part; it is fixed by re-running the step that owns that part, never by
+    hand-editing the assembled pack — a hand-edited pack no longer
+    regenerates, which is the one property the whole structure depends on
+idempotent: true
+resumable: true
+notes: >
+  Every file this step writes is either copied from an original or generated
+  from one. It authors nothing. That is what makes re-running it after any
+  upstream change safe, and what lets projection_regenerates_identically be a
+  meaningful check rather than a tautology.
+
+  Legacy source files are never copied into the pack. If a consumer of the
+  pack needs a fact that only exists in .xhtml or a class body, the correct
+  fix is to extend the Phase A extractor that should have captured it — not
+  to widen this step's copy list. See DECISIONS.md, principle 5.

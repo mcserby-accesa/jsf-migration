@@ -17,20 +17,20 @@
 # reviewing behavior specs during triage); junit/both remain first-class.
 spec_format: gherkin
 
-# BPMN engine pair. Changed from an informational label (`bpmn_target`) to a
-# checked precondition per REVIEW.md §5.4 item 3: under the Phase D decision
-# (DECISIONS.md, 2026-08-07), process definitions are deployed to a real
-# target engine, so engine continuity is no longer an assumption the
-# framework can leave implicit.
+# The BPMN engine the LEGACY application runs.
 #   e.g. camunda7 | camunda8 | flowable | jbpm | none
-# bpmn_source_engine is consumed by steps/b3-draft-behavior-boundary.yaml
-# (copied verbatim into process-type BHV frontmatter as a traceability
-# label) AND checked, together with bpmn_target_engine, at the Phase 0 gate
-# (docs/phase-0-environment.md) — same-engine/same-file-structure/redesign
-# are three cases with very different cost, and the gate must not let a
-# "redesign" case pass silently into Phase D.
+# Consumed ONLY by steps/b3-draft-behavior-boundary.yaml, which copies it
+# verbatim into process-type BHV frontmatter as a traceability label. It is
+# also recorded in the spec pack manifest, so a reader knows which engine's
+# execution semantics the carried-over .bpmn files assume.
+#
+# There is deliberately NO bpmn_target_engine. The pack ships the .bpmn files
+# exactly as discovered; getting them running on whatever engine the
+# replacement uses is the implementer's work, and no step here would read
+# such a parameter. An earlier version made engine continuity a checked
+# Phase 0 precondition — that was correct only while the framework claimed
+# to deploy processes itself, which it no longer does.
 bpmn_source_engine: camunda7
-bpmn_target_engine: camunda7
 
 # Test seam(s). Split into a legacy/target pair per REVIEW.md §5.3 — the
 # legacy JSF app and the target Spring Boot/Angular app are different
@@ -53,15 +53,16 @@ bpmn_target_engine: camunda7
 #   (docs/phase-0-environment.md) — do not assume this default holds.
 legacy_test_seam: service
 #
-# Phase D also needs target_test_seam, layout_fidelity, and
-# service_boundary_fidelity — all three are designed and documented in
-# DECISIONS.md's Phase D sketch, but deliberately NOT declared here yet.
-# Every other parameter in this file has a real, authored consumer today;
-# these three don't (Phase D's steps are sketched only, per REVIEW.md §0's
-# ordering — do not author them before the smoke test completes). Adding
-# config for a phase that doesn't exist is exactly the kind of premature
-# completeness this framework otherwise avoids. Promote them here, with
-# their defaults, when `d0`-`d6` are actually authored — not before.
+# There is deliberately no target-side seam parameter. The framework never
+# tests the target system — implementation is out of scope (DECISIONS.md,
+# "Phase D is spec validation, not implementation"). Phase D's browser-driven
+# validation runs against the *legacy* app, a fixed seam rather than a choice.
+#
+# Phase D will need one parameter, spec_validation_scope, when its steps are
+# authored. It is specified in DECISIONS.md and NOT declared here yet: every
+# parameter in this file has a real, authored consumer today, and that one
+# doesn't. Adding config for a step that doesn't exist is the premature
+# completeness this framework otherwise avoids.
 
 # Where nodes.jsonl / edges.jsonl get loaded for querying.
 #   duckdb | sqlite
@@ -89,13 +90,12 @@ coverage_tool: jacoco
 # step reads this value.
 combinatorial_reducer: pict
 
-# Maps abstract model size classes to concrete model families. Every step
-# contract declares S/M/L, never a vendor model name — this indirection is
-# the ONLY place a concrete model is named, so swapping providers touches one
-# file. Prompts are plain-text with a JSON Schema instruction; no
-# vendor-specific tool-use or structured-output feature is used, so any of
-# these slots can be filled by any comparable-capability model.
-model_tiers:
-  S: gemini-flash-class      # single bounded classification/extraction call
-  M: gemini-pro-class        # bounded synthesis over 2-5 items or one drafting call
-  L: reserved-escalation-only # never a step's default tier; see docs/model-tiers.md
+# Which model runs which step is NOT specified here — it is the implementing
+# team's choice. Each steps/*.yaml declares `kind: llm` or `kind: script`,
+# and nothing beyond that. Every model-driven step is deliberately shaped to
+# need only a small model (one bounded input, one judgment, schema-validated
+# output — see DECISIONS.md principle 4), so a team can run the pipeline
+# cheaply; but that is a property of how the steps are decomposed, not a
+# configuration this file enforces. Prompts are plain text plus a "return
+# JSON matching this schema" instruction, using no vendor-specific tool-use
+# or structured-output feature, so any comparable model can fill any slot.

@@ -1,6 +1,6 @@
 # Prompt: a6-lift-db-logic
 
-Tier: S. Step contract: `steps/a6-lift-db-logic.yaml`. Output schema:
+Step contract: `steps/a6-lift-db-logic.yaml`. Output schema:
 `schemas/a6-lift-db-logic.schema.json`.
 
 ## System / instruction text
@@ -106,7 +106,7 @@ Expected output:
 ## Notes for the orchestrator
 
 - `get_adjustment_factor` in example 2 is exactly the kind of case worth
-  escalating to tier M with that function's own body included as extra
+  escalating with that function's own body included as extra
   context, rather than accepting a mechanically-accurate-but-incomplete
   description — same pattern as a3's `flags[3]` example.
 - If `body_ref` cannot be resolved to a real DDL/SQL source location, this

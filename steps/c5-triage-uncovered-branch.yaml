@@ -1,6 +1,6 @@
 id: c5-triage-uncovered-branch
 phase: C
-tier: S
+kind: llm
 description: >
   Classify every sampled uncovered branch within one enclosing method/class
   (from c4's report) into exactly one of missing_scenario / dead_code /
@@ -22,8 +22,8 @@ input:
     each sub-batch still receiving the full enclosing_scope_context — the
     cost driver is branches-per-call, not context size), same
     mechanical-pre-split principle as b3's 2-hop neighborhood cap, never
-    solved by raising the tier. Without this cap, a large switch/validation
-    method could hand a tier-S model 15+ independent judgments in one call —
+    solved by using a bigger model. Without this cap, a large switch/validation
+    method could hand the model 15+ independent judgments in one call —
     exactly the shape of task where an earlier classification anchors a
     later one, producing a fluent, schema-valid, wrong batch (REVIEW.md
     §1.3's failure mode, not a hypothetical one).
@@ -38,8 +38,8 @@ validators:
   - the output array has exactly one entry per branch in the input batch
 escalate:
   trigger: 3 consecutive schema-validation failures (standard policy, see
-    docs/model-tiers.md)
-  action: retry at tier M with the batch's full enclosing method/class body
+    DECISIONS.md, principle 4)
+  action: retry with the batch's full enclosing method/class body
     (not just the excerpt) as extra context; log the escalation event
 idempotent: true
 resumable: true

@@ -1,6 +1,6 @@
 # Prompt: a4-confirm-edge-inference
 
-Tier: S. Step contract: `steps/a4-confirm-edge-inference.yaml`. Output
+Step contract: `steps/a4-confirm-edge-inference.yaml`. Output
 schema: `schemas/a4-confirm-edge-inference.schema.json`.
 
 ## System / instruction text

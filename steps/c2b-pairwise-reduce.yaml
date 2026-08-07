@@ -1,6 +1,6 @@
 id: c2b-pairwise-reduce
 phase: C
-tier: script
+kind: script
 description: >
   Where a decision table's dimensions include configuration values (feature
   flags, role types, status enums) layered on top of logic branches, run the

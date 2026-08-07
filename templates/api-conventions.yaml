@@ -1,0 +1,141 @@
+# API conventions — human-authored, once per application.
+#
+# Copy this file to the application's working directory and fill it in before
+# running the endpoint-contract derivation. It is NOT part of this skeleton's
+# defaults, and it is NOT a framework parameter: framework.yaml tunes how the
+# pipeline runs, this file states decisions about YOUR target system.
+#
+# Why a file instead of letting the derivation decide: resource naming and
+# error shape are architecture decisions with consequences the framework
+# cannot see. A model asked to invent them will produce something plausible
+# and inconsistent across fifty behaviors. Stated once here, they are applied
+# mechanically to all of them.
+#
+# The derivation step refuses to run if this file is missing or incomplete.
+# That is deliberate — a guessed convention is worse than a blocked step,
+# because it is silently wrong in every fragment it touches.
+#
+# Consumed ONLY by the endpoint-contract derivation step. Nothing upstream
+# (inventory, behaviors, acceptance criteria) reads it.
+
+# ---------------------------------------------------------------------------
+# Paths and naming
+# ---------------------------------------------------------------------------
+
+# Prefix on every generated path. Include the version segment here if you
+# version in the path; leave the version out if you version by header.
+base_path: /api/v1
+
+# How a resource name is written in a path.
+#   kebab-case  -> /api/v1/leave-requests
+#   camelCase   -> /api/v1/leaveRequests
+#   snake_case  -> /api/v1/leave_requests
+path_case: kebab-case
+
+# Whether collection resources are plural (/leave-requests/{id}) or
+# singular (/leave-request/{id}).
+#   plural | singular
+resource_number: plural
+
+# How a legacy bean/service name maps to a resource name. The derivation
+# strips these suffixes before converting case — e.g. LeaveRequestService
+# with strip_suffixes [Service, Bean, DAO] becomes leave-requests.
+strip_suffixes: [Service, ServiceImpl, Bean, ManagedBean, DAO, Repository]
+
+# ---------------------------------------------------------------------------
+# Versioning
+# ---------------------------------------------------------------------------
+
+#   path   -> version lives in base_path above
+#   header -> version sent in a request header; name it below
+#   none   -> unversioned
+versioning: path
+version_header: ""          # only used when versioning: header
+
+# ---------------------------------------------------------------------------
+# Error shape
+# ---------------------------------------------------------------------------
+
+# The response body returned for any non-2xx. Choose one:
+#   rfc7807   -> application/problem+json, RFC 7807 Problem Details
+#   custom    -> the shape declared in error_schema below
+error_style: rfc7807
+
+# Only used when error_style: custom. Declare the object's fields; the
+# derivation emits this as the error schema on every operation.
+error_schema: {}
+#   example:
+#   error_schema:
+#     code: string
+#     message: string
+#     details: array
+
+# Which HTTP status a legacy failure maps to. Extend as your legacy code's
+# exception vocabulary requires — an unmapped exception type is reported by
+# the derivation, never silently defaulted to 500.
+status_mapping:
+  validation_failure: 400
+  not_authenticated: 401
+  not_authorized: 403
+  not_found: 404
+  conflict: 409
+  unexpected: 500
+
+# ---------------------------------------------------------------------------
+# Pagination
+# ---------------------------------------------------------------------------
+
+# How a paginated collection is requested and returned.
+#   page-size    -> ?page=0&size=20
+#   offset-limit -> ?offset=0&limit=20
+#   cursor       -> ?cursor=<opaque>&limit=20
+pagination_style: page-size
+
+# Default page size when a screen's extracted data_tables entry does not
+# specify one. When it DOES specify one, the extracted value wins — that is
+# the point of extracting it (docs/phase-a-inventory.md, "Structural
+# skeletons"): the page that paginates at 10 must not hit an endpoint
+# defaulting to 20.
+default_page_size: 20
+
+# Envelope for a paginated response.
+#   wrapped -> { "items": [...], "total": n, "page": 0 }
+#   headers -> bare array body, totals in response headers
+pagination_envelope: wrapped
+
+# ---------------------------------------------------------------------------
+# Authentication and authorization
+# ---------------------------------------------------------------------------
+
+# How the target authenticates. Emitted as the OpenAPI security scheme.
+#   bearer-jwt | session-cookie | oauth2 | none
+auth_style: bearer-jwt
+
+# Whether the roles extracted from legacy AUTHZ nodes are carried onto the
+# generated operations as a security requirement.
+#   true  -> each operation declares the roles its legacy counterpart required
+#   false -> authorization is enforced elsewhere; the contract stays silent
+carry_legacy_roles: true
+
+# ---------------------------------------------------------------------------
+# Verb mapping
+# ---------------------------------------------------------------------------
+
+# Legacy service methods do not announce their HTTP verb. The derivation
+# guesses from the method name using these prefix lists, and falls back to
+# a judgment call (recorded, with its reasoning) when no prefix matches.
+#
+# A method that maps to no CRUD verb at all — approve(), recalculate(),
+# submitForReview() — becomes an action sub-resource:
+#   POST /leave-requests/{id}/approve
+# rather than being forced into PUT. Set action_style: rpc instead if you
+# prefer a flat RPC-style surface.
+verb_prefixes:
+  get:    [get, find, load, list, search, fetch, read, is, has]
+  post:   [create, add, submit, register, start, send]
+  put:    [update, save, edit, modify, set]
+  delete: [delete, remove, cancel, destroy]
+
+#   sub-resource -> POST /leave-requests/{id}/approve
+#   rpc          -> POST /leave-requests/approve
+action_style: sub-resource

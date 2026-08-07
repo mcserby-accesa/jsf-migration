@@ -1,6 +1,6 @@
 # Prompt: a3-lift-el-expression
 
-Tier: S. Step contract: `steps/a3-lift-el-expression.yaml`. Output schema:
+Step contract: `steps/a3-lift-el-expression.yaml`. Output schema:
 `schemas/a3-lift-el-expression.schema.json`.
 
 ## System / instruction text
@@ -104,6 +104,6 @@ Expected output:
 
 ## Notes for the orchestrator
 
-- `flags[3]` in example 2 is exactly the kind of case worth escalating to
-  tier M with the bean's full field list (what `flags` actually enumerates)
-  rather than accepting a mechanically-accurate-but-meaningless description.
+- `flags[3]` in example 2 is exactly the kind of case worth retrying with
+  the bean's full field list (what `flags` actually enumerates) rather than
+  accepting a mechanically-accurate-but-meaningless description.

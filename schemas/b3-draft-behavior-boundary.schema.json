@@ -23,7 +23,7 @@
     "needs_prereduction": {
       "type": "boolean",
       "default": false,
-      "description": "True if the model judges the supplied neighborhood is still too large to draft confidently; triggers mechanical pre-split, not a tier escalation."
+      "description": "True if the model judges the supplied neighborhood is still too large to draft confidently; triggers mechanical pre-split, not a retry with a bigger model."
     }
   }
 }

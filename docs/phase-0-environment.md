@@ -66,22 +66,20 @@ to run derived tests against at all).
      when the view layer's behavior cannot be adequately covered any other
      way.
    This check only needs to prove reachability, not build the harness —
-   harness construction beyond one throwaway test is Phase 0b's and Phase D's
-   concern. Record the choice and the rejected alternatives' reasons in the
-   same checklist file referenced in "Exit criteria" below.
-5. **BPMN engine continuity, if the app has BPMN processes.** Check
-   `framework.yaml: bpmn_source_engine` against `bpmn_target_engine`:
-   - **Same engine, same major version** — passes. Process topology and
-     gateway expressions carry over; only the binding layer (service task
-     delegates, listeners, form keys) is re-implemented in Phase D.
-   - **Same file structure, different engine or major version** (e.g.
-     Camunda 7 → 8) — passes, but flag it: expression language and execution
-     semantics do not transfer for free, and every gateway condition and
-     listener attachment needs individual re-validation in Phase D. Budget
-     this as real work.
-   - **Engine change with process redesign** — **fails this gate.** Flag it
-     and handle it as a separate workstream; do not let it pass silently into
-     Phase D. See REVIEW.md §5.4 item 3.
+   harness construction beyond one throwaway test is Phase 0b's concern.
+   Record the choice and the rejected alternatives' reasons in the same
+   checklist file referenced in "Exit criteria" below.
+5. **BPMN engine identified, if the app has BPMN processes.** Set
+   `framework.yaml: bpmn_source_engine` to the engine the legacy app
+   actually runs, and confirm the `.bpmn` files are readable. That is the
+   whole check. The spec pack ships those files exactly as discovered
+   (`docs/spec-pack.md`) together with `process/bindings.json`, which
+   enumerates what every service task, listener, and gateway condition
+   references. Getting them running on the replacement's engine is the
+   implementer's work; this framework neither deploys processes nor has an
+   opinion on the target engine. Recording the source engine matters only so
+   a reader of the pack knows which execution semantics the carried-over
+   files assume.
 6. **Read access to everything Phase A will extract from.** Source code,
    `faces-config.xml` and other JSF config, the BPMN process definitions, and
    the database schema (including trigger and stored-procedure definitions —

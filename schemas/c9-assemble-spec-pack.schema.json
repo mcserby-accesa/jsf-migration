@@ -1,0 +1,77 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "c9-assemble-spec-pack.schema.json",
+  "title": "c9-assemble-spec-pack report (also the pack's manifest.json)",
+  "type": "object",
+  "required": ["status", "pack_root", "source_engine", "conventions_hash", "parts", "checks"],
+  "additionalProperties": false,
+  "properties": {
+    "status": { "type": "string", "enum": ["pass", "fail"] },
+    "pack_root": { "type": "string" },
+    "source_engine": {
+      "type": "string",
+      "description": "framework.yaml: bpmn_source_engine, recorded so a reader knows which execution semantics the carried-over .bpmn files assume. The framework has no opinion on the target engine."
+    },
+    "conventions_hash": {
+      "type": "string",
+      "description": "Hash of the api-conventions.yaml the API contract was derived from."
+    },
+    "behavior_count": { "type": "integer", "minimum": 0 },
+    "parts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["path", "kind"],
+        "additionalProperties": false,
+        "allOf": [
+          {
+            "if": { "not": { "properties": { "kind": { "const": "mutable_seed" } } } },
+            "then": { "required": ["sha256"] }
+          },
+          {
+            "if": { "properties": { "kind": { "enum": ["projection", "derived", "verbatim_copy"] } }, "required": ["kind"] },
+            "then": { "required": ["source"] }
+          }
+        ],
+        "properties": {
+          "path": { "type": "string", "description": "Relative to pack_root." },
+          "kind": {
+            "type": "string",
+            "enum": ["original", "projection", "derived", "verbatim_copy", "generated_index", "mutable_seed"],
+            "description": "original: the only place this content exists. projection: regenerated from an original, must regenerate byte-identically. derived: computed once from originals plus a human input (the API contract). verbatim_copy: byte-identical to a legacy source file (.bpmn). generated_index: manifest and README. mutable_seed: created empty and thereafter owned by the implementer (progress.jsonl) — excluded from hashing and regeneration checks."
+          },
+          "source": {
+            "type": "string",
+            "description": "For projection/derived/verbatim_copy: what it was produced from. Required for anything that is not an original."
+          },
+          "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$", "description": "Absent for kind mutable_seed — that file changes by design." }
+        }
+      }
+    },
+    "checks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "passed"],
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string",
+            "enum": [
+              "spec_pack_complete",
+              "projection_regenerates_identically",
+              "bpmn_copied_verbatim",
+              "openapi_merge_consistent",
+              "endpoint_contract_complete",
+              "inventory_coverage_complete",
+              "no_legacy_source_in_pack",
+              "dependency_order_derivable"
+            ]
+          },
+          "passed": { "type": "boolean" },
+          "failures": { "type": "array", "items": { "type": "string" } }
+        }
+      }
+    }
+  }
+}

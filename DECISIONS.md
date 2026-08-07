@@ -15,24 +15,25 @@ pilot can correct them.
 3. The canonical behavior spec is format-independent. Executable tests are
    rendered from it into per-harness outputs — never hand-translated between
    harnesses.
-4. Every step must be runnable by a small/mid model (Gemini-Flash class).
-   This is architectural, enforced by bounded input + one judgment per call +
-   schema-validated output + escalation, not aspirational. **Rescoped
-   2026-08-07 to the specification pipeline, Phases A–C.** Phase D's `d2`
-   (implement a behavior in the target stack from its spec) is explicitly
-   exempt — implementing a Spring Boot service from a specification is not
-   tier-S/M work under any bounding, and pretending otherwise while Phase D
-   violates it in practice was worse than stating the boundary. See
-   `docs/model-tiers.md` and REVIEW.md §5.6.
+4. **Every step is bounded: one small input, one judgment per call, a
+   schema-validated output, and a defined retry path.** This is why the
+   pipeline is decomposed the way it is, and it is what makes a small, cheap
+   model sufficient for the whole thing. But **which** model runs a step is
+   not this framework's decision — it is the implementing team's. Steps
+   declare `kind: llm` or `kind: script` and nothing more. An earlier version
+   named model size classes (S/M/L) per step and mapped them to model
+   families in `framework.yaml`; that dated fast and claimed an authority the
+   method doesn't need. The discipline stayed; the model naming went.
 5. **The implementer never reads legacy source. Anything it needs from
    legacy source must be extracted into an artifact first.** This is
    principle 2 (script first, LLM second) restated for Phase D, and it is
    the rule that actually decides the UI/API-structure questions below —
-   not a new rule invented for them. Handing `d2` the original `.xhtml` or
-   the original `SVC` class body, even "alongside" the spec pack, reopens an
-   unaudited, untraceable channel from legacy source into implementation —
-   exactly what principle 2 already forbids for Phase A's inventory. See
-   "Structural skeletons" below and `docs/phase-a-inventory.md`.
+   not a new rule invented for them. Shipping the original `.xhtml` or the
+   original `SVC` class body inside the spec pack, even "alongside" the
+   specs, reopens an unaudited, untraceable channel from legacy source into
+   implementation — exactly what principle 2 already forbids for Phase A's
+   inventory. See "Structural skeletons" below, `docs/phase-a-inventory.md`,
+   and `docs/spec-pack.md`.
 
 ## Settled: structural decisions
 
@@ -68,25 +69,28 @@ pilot can correct them.
   query that assembles `b3`'s input, attached to the `BHV-####.md` doc as
   its `neighborhood_diagram` field — no LLM judgment involved. See
   `docs/phase-b-behaviors.md`, "Neighborhood diagram."
-- Test seam: split into `legacy_test_seam` and `target_test_seam` — the
-  legacy JSF app and the target Spring Boot/Angular app are different
-  systems with different seams; one parameter conflated two meanings.
-  Default `legacy_test_seam` is `service`, not `rest`: most legacy JSF apps
-  have no REST boundary, and `service` reaches the backing beans where JSF
-  business logic actually lives. Confirm per-application at the Phase 0 gate
-  — do not assume the default. See REVIEW.md §5.3. `legacy_test_seam` is
-  declared in `framework.yaml` (real consumers: `c3`'s renderer, `c4`, the
-  Phase 0 gate); `target_test_seam` is **not** — see the Phase D sketch
-  below for why.
-- BPMN engine continuity is a checked precondition, not an assumption. The
-  framework assumes the target stack keeps the source BPMN engine — or at
-  minimum its file structure — since re-implementing the process bindings
-  (service task delegates, listeners, gateway conditions referencing legacy
-  beans) is already real work without also changing execution semantics.
-  `framework.yaml: bpmn_source_engine` / `bpmn_target_engine` are checked at
-  the Phase 0 gate; an engine change accompanied by process redesign fails
-  that gate and is handled as a separate workstream, never absorbed silently
-  into Phase D. See `docs/phase-0-environment.md` and REVIEW.md §5.4.
+- Test seam: `legacy_test_seam` names the layer Phase C's derived tests
+  exercise against the legacy app. Default is `service`, not `rest`: most
+  legacy JSF apps have no REST boundary, and `service` reaches the backing
+  beans where JSF business logic actually lives. Confirm per-application at
+  the Phase 0 gate — do not assume the default. See REVIEW.md §5.3.
+  There is deliberately **no** target-side seam parameter: the framework
+  never tests the target system. Phase D's browser-driven validation runs
+  against the *legacy* app, which is a fixed seam rather than a choice.
+- **BPMN definitions are shipped as discovered, not reasoned about.** The
+  spec pack carries the `.bpmn` files byte-identically, plus
+  `process/bindings.json` enumerating what every service task, listener, and
+  gateway condition references and which inventory node that resolves to.
+  Making those files run on the replacement's engine is the implementer's
+  work. The framework therefore has **no** `bpmn_target_engine` parameter and
+  no engine-continuity gate: it would have zero consumers, since no step here
+  deploys a process or inspects a target engine. `bpmn_source_engine` is kept
+  because it does have one — `b3` copies it into process-behavior frontmatter
+  as a traceability label, and the pack records it so a reader knows which
+  execution semantics the carried-over files assume. An earlier version made
+  continuity a checked Phase 0 precondition; that was right only while the
+  framework claimed to deploy processes itself. See
+  `docs/phase-0-environment.md` and `docs/spec-pack.md`.
 - Branch-coverage triage (`c5`) is risk-tiered, not a blanket 100% gate.
   `rule`/`process` behaviors and anything flagged `high_risk_override` (money,
   authorization, state transitions) triage every uncovered branch; everything
@@ -128,132 +132,134 @@ pilot can correct them.
   backend seam (a paginated table's page size) is extracted once and
   threaded through both derivations, not independently re-derived on each
   side — see the same section.
-- **Structural fidelity is a real, separate parameter from visual fidelity,
-  and only the structural half is something this framework promises to
-  check.** `layout_fidelity` / `service_boundary_fidelity` (`preserve` |
-  `redesign`, defaults both `preserve`) govern whether Phase D's fidelity
-  validator (sketched below) enforces an exact match between the
-  implementation and the extracted skeleton. They do not gate extraction
-  (always mechanical, always cheap) and they do not extend to visual/pixel
-  treatment (component library, spacing, styling) — that remains `d0`'s
-  one-time decision. Kept as two parameters, not one, because a redesign can
-  apply to one side of the stack (API surface) without the other (page
-  layout). Not yet declared in `framework.yaml` — see the Phase D sketch
-  below for why.
+- **Structural fidelity is the implementer's call, not the framework's.**
+  Earlier versions specified `layout_fidelity` / `service_boundary_fidelity`
+  parameters governing whether a Phase D validator enforced an exact match
+  between the implementation and the extracted skeleton. With implementation
+  out of scope there is no such validator and no such parameter. The
+  framework's obligation ends at extracting the skeleton accurately and
+  shipping it in the spec pack; whether the rebuild preserves or redesigns
+  that structure is the adopting team's decision, and not one this framework
+  has standing to check. Nothing upstream changes — extraction was always
+  unconditional and cheap regardless of the answer.
 - IDs are stable and global: `SCR-####`, `SVC-####`, `BHV-####`, etc. All
   linking between documents is by ID, never by path or name.
 - Parameters in `framework.yaml` are each consumed at exactly one boundary
   (e.g. `spec_format` only inside the renderer step), so a parameter choice
   is reversible and never leaks into upstream artifacts.
 
-## Settled: Phase D is in scope, reshaped (2026-08-07)
+## Settled: Phase D is spec validation, not implementation (2026-08-07)
 
-Superseded: Phase D was "test harness construction for the new stack, out of
-scope." That target was both impractical (generating a working test suite
-for a Spring Boot + Angular app is hard to the point of impracticality) and
-the wrong thing to aim at.
+This decision reversed, and the history matters because the reversal is easy
+to re-argue:
 
-Phase D is now: **the artifacts this framework produces (`BHV-####.md`,
-target-rendered tests, decision tables, the triage log, the inventory graph,
-BPMN definitions + binding inventory) become the implementation brief for
-the migration, and an LLM implements the target application from them**,
-sequenced by the inventory graph's dependency order. `d0` (human-authored
-target architecture, once per application) is a prerequisite, not optional —
-see REVIEW.md §5.8 for why implementing fifty behaviors with no
-architectural constraint is the most likely way this phase produces
-plausible code that doesn't compose. The step contracts (`d0`–`d6`) are
-specified in REVIEW.md §5.6 but **not yet authored in `steps/`** — per
-REVIEW.md §0, that work is deferred until after the smoke test (§4) and
-Step 4's evidence-based P0/P1 decisions; do not build the full Phase D
-contract set before then.
+1. **Originally:** Phase D was "build a test harness for the new stack" —
+   out of scope, on impracticality grounds.
+2. **Then:** reshaped to "an LLM implements the target application from the
+   spec pack," and brought into scope.
+3. **Now (current):** implementation is out of scope again, and Phase D is
+   **validating the spec against the legacy application, end to end.**
 
-This does not resolve the completeness-oracle dependency (`c4` still needs a
-harness Phase 0 explicitly does not build) — if anything it tightens it: an
-unverified spec now propagates its gaps straight into the new system, not
-just into a human team's eventual notice of them. The walking-skeleton gate
-above is more important under this decision, not less.
+Why implementation left again: building the target is the adopting team's
+work, and a framework claiming to specify it silently takes on their
+architecture, their stack conventions, and their quality bar — none of which
+it can see. What this framework can uniquely do is prove its own output
+correct before anyone builds on it. Narrower claim, defensible one.
 
-**Extensions to the `d0`–`d6` sketch (2026-08-07), design-only — same
-deferral as the rest of Phase D, not yet authored in `steps/`:**
+**Phase D is therefore: derived acceptance tests driven through a browser
+against the running legacy application, checking that the specs describe what
+the legacy system actually does.**
 
-**Parameters specified here, not in `framework.yaml`, until Phase D is
-authored** (2026-08-07 — moved out of `framework.yaml` where they had been
-declared with no real consumer yet; every other parameter in that file is
-consumed by an authored step today, and these three weren't, which is
-exactly the premature-completeness pattern this framework otherwise avoids):
+It is not redundant with `c4`. At the default `legacy_test_seam: service`,
+`c4` never renders a page — so every EL expression lifted by `a3`
+(`rendered`/`disabled`/`required`) and every `NAV` navigation rule is
+extracted, lifted into a `RULE`, turned into acceptance criteria, and then
+executed by nothing. Those lifts are currently claims no step checks. A
+browser-driven run is the only thing that can check them, which is what makes
+this a distinct phase rather than just `legacy_test_seam: ui`.
 
-- `target_test_seam: rest | service | e2e`, default `rest`. Which layer
-  `d3`/`d4` render/verify against the *target* app. Distinct from
-  `legacy_test_seam` (which IS in `framework.yaml` — see above) for the same
-  reason the two seams were split in the first place.
-- `layout_fidelity: preserve | redesign`, default `preserve`.
-- `service_boundary_fidelity: preserve | redesign`, default `preserve`.
+**Enforcement scope — designed here, not yet authored:**
+`spec_validation_scope: none | view_and_high_risk | full`, default
+`view_and_high_risk`. Mandatory for behaviors covering a `RULE` derived from
+an `EL` or `NAV` node (exactly the ones `c4` structurally cannot reach) plus
+anything `high_risk_override: true`; everything else is skipped and recorded
+as skipped, the same bookkeeping discipline as `not_sampled` in the triage
+log. A blanket "validate everything" gate on a real application's behavior
+count is the unachievable-gate failure this file already rejected for `c5`;
+a "validate nothing" default would leave the framework's central claim
+unverified. Not declared in `framework.yaml` until the steps exist, per that
+file's one-parameter-one-consumer rule.
 
-When `d0`–`d6` are authored, promote these three into `framework.yaml` with
-these same defaults, each annotated with its real `consumed_by` step —
-don't rediscover the defaults from scratch.
+**What the reversal deletes:** the `d0`–`d6` step sketches; `target_test_seam`;
+`layout_fidelity` / `service_boundary_fidelity` and the structural-diff
+fidelity validator; and the legacy-table→target-entity schema mapping step.
+REVIEW.md §5 stays as the historical record of the superseded design — this
+file, not REVIEW.md, is authoritative on what is settled.
 
-- **API ownership is split across three layers**, mirroring the `d0`/
-  extraction/`d2` split used for layout: conventions (resource naming,
-  versioning, error shape, auth, status-code/pagination conventions) are
-  `d0`'s, decided once; the concrete per-behavior endpoint contract (path,
-  verb, request/response shape) is derived by a new bounded step,
-  `d1b-derive-endpoint-contract` (tier S/M, one `SVC` method at a time,
-  mechanical-first from the service skeleton + `d0`'s conventions,
-  overridable only where a legacy method doesn't map onto CRUD semantics);
-  implementation of the logic behind a frozen contract is `d2`'s, as before.
-  Per-behavior contracts are emitted as OpenAPI fragments, merged
-  (deterministic script) into one application-level OpenAPI document, and
-  **Spring controller interfaces and the Angular HTTP client are generated
-  from it by standard codegen, not by `d2`** — this removes an entire class
-  of wiring/DTO invention from the large model's job and gives Phase D a
-  cheap, mechanical correctness check (implementations type-check against an
-  interface generated independently of them) closer to `c4`'s role for
-  behavior than anything else in Phase D has.
-- **Data access is three already-covered pieces and one real addition.**
-  Schema mapping (legacy table/column → target entity) is a new bounded
-  step in the same shape as the endpoint contract — mechanical from `DB`
-  nodes' `columns` (docs/phase-a-inventory.md), judgment only for ORM-idiom
-  translation, with `d0` owning persistence conventions once. DAO/repository
-  method shape needs no new mechanism — DAOs are already `SVC` nodes, so the
-  service skeleton already applies. Non-trivial query logic inside a DAO
-  method needs no new mechanism either — it's ordinary code already flowing
-  through `c1`/`c2` via the owning behavior. **Trigger/stored-procedure
-  logic (D10) is the one piece that was a real, closable gap — closed
-  2026-08-07** via `a6-lift-db-logic` (Phase A, not deferred — see
-  `docs/phase-a-inventory.md`), the same lift mechanism as EL, with the same
-  "no `c4` coverage, tracked via the lift" story, since trigger/procedure
-  bodies execute inside the DB engine and are equally invisible to JaCoCo.
-  **Migrating the actual data (moving legacy rows into the target schema)
-  is explicitly out of scope for this framework** — real, necessary
-  engagement work, but an ETL/runbook concern, not something this framework
-  specifies, same category as BPMN engine redesign.
-- **Fidelity needs an oracle, not just a flag.** `layout_fidelity`/
-  `service_boundary_fidelity` (`framework.yaml`) are enforced by a
-  structural-diff validator, part of `d4`'s verification: parse the
-  generated component/controller and diff its field/column order, grouping,
-  pagination, and wiring against the extracted skeleton — the same
-  mechanical-diff discipline as `rendering_idempotent`
-  (`validators/README.md`), not a prompt instruction trusted on its own.
-  Remaining implementation freedom beyond what the skeleton specifies
-  (component-library specifics, CSS) is legitimate `d2` judgment, handled by
-  extending Step 5b's sampled human-review pattern to fidelity compliance
-  rather than inventing a separate QA mechanism.
+**What survives, moved upstream into Phase C:** the endpoint-contract
+derivation formerly sketched as `d1b`. See the next entry.
 
-## Settled: explicitly out of scope for this skeleton
+## Settled: the spec pack is the deliverable (2026-08-07)
 
-- Designing the target Spring Boot / Angular architecture — except `d0`
-  (target architecture decisions), which is now a required, human-authored
-  Phase D prerequisite; see above. This bullet now means: this *skeleton*
-  does not design any specific application's architecture, not that Phase D
-  omits the step.
-- Any analysis of a specific application — no app-specific extractor logic,
-  no worked example beyond one illustrative `BHV`.
-- Implementing any parser, validator, or orchestrator. Every such component
-  is specified as a contract only.
-- Building the Phase D step contracts (`d0`–`d6`) and the test harness /
-  fixtures / seed-data wiring / CI wiring they imply — sketched in REVIEW.md
-  §5.6, deferred until after the smoke test per REVIEW.md §0.
+The framework's output is one directory — the **spec pack** — specified in
+`docs/spec-pack.md`: behaviors, rendered tests, the inventory graph, page and
+service skeletons, the REST API contract, BPMN definitions carried over
+byte-identically plus their binding inventory, the data model, authorization
+constraints, and the coverage triage log. "Spec pack" was previously an
+undefined phrase used in five documents; with implementation out of scope it
+became the handoff boundary and needed an actual manifest and completeness
+gate.
+
+Two rules give it integrity. Content lives in exactly one **original** file;
+everything else is a **projection**, regenerated from an original and checked
+to regenerate byte-identically — a pack holding two editable copies of one
+fact will eventually hold two different facts with nothing to say which is
+right. And legacy source is never shipped inside it, because a pack
+containing the `.xhtml` files has reopened the unaudited channel principle 5
+exists to close.
+
+**The REST API contract is the one deliberate exception to "the framework
+describes the legacy app, it does not design the target."** It is derived —
+from service skeletons, the data model, screen pagination facts, and a
+human-authored `templates/api-conventions.yaml` — and emitted as OpenAPI
+fragments merged by script into one document.
+
+The exception is earned by a property no other target-side artifact has:
+**two independently-built sides must agree on it.** If the Angular client and
+the Spring backend each derive their own endpoint shape from the same specs,
+they will differ, and the difference surfaces at integration time. Deriving
+it once and generating both sides from one document removes that failure mode
+outright. Legacy-table→target-entity mapping was considered under the same
+argument and rejected: one side owns the entity, so there is no second party
+to disagree with, and it stays out of scope.
+
+Conventions (resource naming, versioning, error shape, pagination, auth) are
+a human-authored input, never inferred. A model asked to invent them produces
+something plausible and inconsistent across fifty behaviors; the derivation
+step refuses to run without the file rather than guessing. This also keeps
+the scope line clean — the framework consumes an architecture decision, it
+does not make one.
+
+Trigger/stored-procedure logic (D10) remains closed via `a6-lift-db-logic` in
+Phase A: the same lift mechanism as EL, since trigger and procedure bodies
+execute inside the DB engine and are equally invisible to JaCoCo.
+
+## Settled: explicitly out of scope
+
+- **Building the target application.** The spec pack is the handoff; what
+  happens after it is the adopting team's work.
+- **Designing the target architecture** — module boundaries, framework
+  choices, persistence strategy, component library, styling. The API
+  contract's *conventions* are an input to this framework, not an output of
+  it.
+- **Migrating the data.** Moving legacy rows into the new schema is real,
+  necessary work, but it is an ETL runbook, not a specification.
+- **Visual fidelity.** The pack states that a screen has these fields, in
+  this grouping, with this widget kind. It does not state what it looks like.
+- **Any analysis of a specific application** — no app-specific extractor
+  logic, no worked example beyond one illustrative `BHV`.
+- **Implementing any parser, validator, renderer, or orchestrator.** Every
+  such component is specified as a contract only.
 
 ## Open questions this skeleton had to decide unilaterally
 
@@ -264,12 +270,12 @@ a pilot and correct here.
 | # | Question | Decision made here | Where it shows up |
 |---|---|---|---|
 | 1 | Exact hop-bound for "one behavior's local subgraph" when drafting a behavior boundary | 2 hops from the seed screen/process node, hard cap; anything larger is pre-split mechanically before the LLM sees it | `steps/b3-draft-behavior-boundary.yaml` |
-| 2 | Escalation retry count before bumping tier | 3 consecutive schema/confidence failures | `docs/model-tiers.md` |
+| 2 | Escalation retry count before a step is treated as failing | 3 consecutive schema/confidence failures | each `steps/*.yaml` `escalate:` block |
 | 3 | Node ID prefixes beyond the three given (`SCR`, `SVC`, `BHV`) | Added `RULE`, `PROC`, `TASK`, `JOB`, `NAV`, `DB`, `EL` — see `docs/phase-a-inventory.md` | inventory schema |
 | 4 | Default `combinatorial_reducer` | `pict` (freely available, Microsoft-licensed, wide precedent) over `acts` | `framework.yaml` |
 | 5 | Default `spec_format` | `gherkin` — more legible to non-engineers reviewing behavior specs during triage; `junit` and `both` remain first-class options. **`framework.yaml` corrected 2026-08-07** to actually default to `gherkin`; it previously defaulted to `both`, contradicting this row (REVIEW.md D7) | `framework.yaml` |
-| 6 | Default `bpmn_source_engine`/`bpmn_target_engine` | Both left as `camunda7` placeholders. **Changed 2026-08-07**: no longer an informational-only tag — engine continuity is now a checked Phase 0 precondition (see "Settled: structural decisions" above and REVIEW.md §5.4 item 3), because Phase D deploys the carried-over BPMN definitions to a real target engine | `framework.yaml`, `docs/phase-0-environment.md` |
-| 7 | How "identifying reusable rule behaviors" gets mechanically pre-reduced | Clone/AST-similarity detection (`b1-detect-rule-similarity-candidates`, a script step) proposes candidate clusters of 2–5 items; a tier-M step confirms each candidate in isolation. No step ever asks a model to scan the whole codebase for duplication. | `steps/b1-*.yaml`, `steps/b2-*.yaml` |
+| 6 | Default `bpmn_source_engine`/`bpmn_target_engine` | Both left as `camunda7` placeholders. Engine continuity is a checked Phase 0 precondition, and stays one even with implementation out of scope: the spec pack ships the `.bpmn` files byte-identically, which is only a valid deliverable if the target engine can execute them | `framework.yaml`, `docs/phase-0-environment.md`, `docs/spec-pack.md` |
+| 7 | How "identifying reusable rule behaviors" gets mechanically pre-reduced | Clone/AST-similarity detection (`b1-detect-rule-similarity-candidates`, a script step) proposes candidate clusters of 2–5 items; a bounded step confirms each candidate in isolation. No step ever asks a model to scan the whole codebase for duplication. | `steps/b1-*.yaml`, `steps/b2-*.yaml` |
 | 8 | Rolling window for the escalation-rate metric | Last 20 calls to a given step | `docs/metrics.md` |
 | 9 | Whether Phase 0 needs step contracts like A/B/C | No — Phase 0 is a one-time entry gate checklist, not a repeatable pipeline step, so it has a doc but no `steps/*.yaml` | `docs/phase-0-environment.md` |
-| 10 | Model name for tiers S/M/L | Left as size classes (S/M/L) mapped to example model *classes* in `framework.yaml`, never a specific vendor API — prompts are plain-text + "return JSON matching this schema" with no vendor tool-use features, so the mapping is swappable | `framework.yaml`, `docs/model-tiers.md` |
+| 10 | Which model runs which step | **Not specified — the implementing team's choice.** Steps declare only `kind: llm` or `kind: script`. An earlier version mapped S/M/L size classes to model families in `framework.yaml`; dropped because it dated fast, constrained adopters, and claimed an authority the framework doesn't need. The bounded-step discipline that made small models viable is unchanged | `steps/*.yaml` |

@@ -1,0 +1,50 @@
+id: c8-resolve-unmapped-endpoint
+phase: C
+kind: llm
+description: >
+  Resolve ONE legacy service method that c7's rules could not map onto an
+  HTTP operation — typically a method whose name matches no verb prefix, or
+  whose semantics are not CRUD at all (approve, recalculate, submitForReview).
+  Produces the same OpenAPI operation fragment shape c7 emits, plus the
+  reasoning for the choice.
+input:
+  type: single_service_method
+  source: >
+    one unmapped entry from c7 + that method's full skeleton entry (name,
+    params, return_type, action_bound, nav_outcomes), its owning SVC's fqcn
+    and annotations, the DB columns behind its param/return types, and the
+    api_conventions block
+  fields: [svc_id, method, owning_service, type_facts, api_conventions,
+           unmapped_reason]
+  bound: exactly one method per call
+prompt: prompts/c8-resolve-unmapped-endpoint.md
+output_schema: schemas/c8-resolve-unmapped-endpoint.schema.json
+validators:
+  - the produced path obeys api_conventions (base_path, path_case,
+    resource_number) — a path that ignores the conventions is rejected
+    outright, not accepted with a warning
+  - every request/response field cites a real param, return type, or DB
+    column supplied in type_facts; no invented fields
+  - when the method is not CRUD-shaped, the operation follows
+    api_conventions.action_style (sub-resource or rpc), never a forced PUT
+  - the fragment validates as a standalone OpenAPI operation object
+escalate:
+  trigger: 3 consecutive schema-validation failures, OR a returned path that
+    fails the conventions check twice
+  action: >
+    retry once with the owning service's full public_methods list added, so
+    the method can be shaped relative to its siblings rather than alone; if
+    that fails, mark the method needs_human_contract and continue — an
+    unresolved endpoint blocks c9's completeness gate, which is the correct
+    place for it to surface, not a guessed operation shipped in the pack
+idempotent: true
+resumable: true
+notes: >
+  This step is deliberately narrow. It does not design an API — c7's rules
+  and api-conventions.yaml already did that. It answers one question about
+  one method that the rules could not answer, which is what keeps it a
+  bounded, single-judgment call rather than an architecture exercise.
+
+  A high rate of methods reaching this step is a signal about
+  api-conventions.yaml (its verb_prefixes are too narrow for this codebase's
+  naming), not about the model. Fix the conventions file; see docs/metrics.md #6.
