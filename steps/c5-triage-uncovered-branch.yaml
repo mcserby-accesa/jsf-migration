@@ -25,8 +25,8 @@ input:
     solved by using a bigger model. Without this cap, a large switch/validation
     method could hand the model 15+ independent judgments in one call —
     exactly the shape of task where an earlier classification anchors a
-    later one, producing a fluent, schema-valid, wrong batch (REVIEW.md
-    §1.3's failure mode, not a hypothetical one).
+    later one, producing a fluent, schema-valid, wrong batch — an observed
+    failure mode, not a hypothetical one.
 prompt: prompts/c5-triage-uncovered-branch.md
 output_schema: schemas/c5-triage-uncovered-branch.schema.json
 validators:
@@ -57,7 +57,7 @@ notes: >
   rest, no LLM call involved. This step's own contract and prompt are
   identical either way. See docs/metrics.md #3.
 
-  Dropped from this contract (D8, REVIEW.md §2): the previous escalation
+  Dropped from this contract: the previous escalation
   trigger required re-running every triage twice and comparing results,
   which both doubled this step's already-highest call volume and
   contradicted idempotent: true declared above. Reproducibility divergence

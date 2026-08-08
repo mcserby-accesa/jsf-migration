@@ -36,10 +36,11 @@ resumable: true
 notes: >
   bpmn_source_engine (framework.yaml) is consumed here, and only here: when
   the seed node is a PROC, its value is copied verbatim into the drafted
-  boundary's frontmatter as a traceability label. Since REVIEW.md §5.4 item
-  3, engine continuity itself is checked at the Phase 0 gate (framework.yaml:
-  bpmn_source_engine vs bpmn_target_engine) — this step only ever copies the
-  source-side value, never compares the pair.
+  boundary's frontmatter as a traceability label. There is deliberately no
+  bpmn_target_engine to compare it against: the framework records which
+  engine's semantics the carried-over .bpmn files assume and has no opinion
+  on what runs them (DECISIONS.md, 'BPMN definitions are shipped as
+  discovered'). This step only ever copies the source-side value.
 
   A deterministic script, run alongside this step (not part of its LLM
   output_schema), renders the same neighborhood_nodes/neighborhood_edges

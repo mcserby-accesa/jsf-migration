@@ -22,7 +22,7 @@ validators:
     Scenario Outline/@ParameterizedTest exists (per
     templates/renderers/*.md rule "decision_table_ref rows are not
     independently rendered") — a row satisfying neither is a silent drop
-    (this is D4's fix — a row with a non-empty decision_table_ref used to be
+    (a row with a non-empty decision_table_ref used to be
     ambiguous between "rendered on its own" and "rendered via its table,"
     and the renderers resolved it inconsistently by hand)
   - if spec_format is "both", gherkin and junit outputs reference the same

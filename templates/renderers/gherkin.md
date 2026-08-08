@@ -20,8 +20,8 @@ already covers that exact condition combination — rendering the row a
 second time would duplicate, not add, coverage. This row is still
 accounted for by `c3`'s "no silent drops" validator via its
 `decision_table_ref` association, not via an independent `Scenario`. This
-is the resolution to D4 (REVIEW.md) — previously unspecified, and resolved
-inconsistently by hand in `examples/`.
+case was previously unspecified, and was resolved inconsistently by hand in
+`examples/` as a result.
 
 1. **Feature block**
    ```gherkin

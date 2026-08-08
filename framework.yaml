@@ -32,7 +32,7 @@ spec_format: gherkin
 # to deploy processes itself, which it no longer does.
 bpmn_source_engine: camunda7
 
-# Test seam(s). Split into a legacy/target pair per REVIEW.md §5.3 — the
+# Test seam(s). Split into a legacy/target pair — the
 # legacy JSF app and the target Spring Boot/Angular app are different
 # systems with different seams; one parameter cannot describe both.
 #
@@ -40,9 +40,9 @@ bpmn_source_engine: camunda7
 #   Which layer c3's legacy render and c4 exercise against the *legacy* app.
 #   Consumed by templates/renderers/junit.md (selects skeleton shape),
 #   steps/c4-run-coverage-oracle.yaml (runs against it), and validated for
-#   reachability (not reinterpreted) by Phase 0's entry gate — see D6 in
-#   REVIEW.md: these three reads are the gate checking the same choice that
-#   c3/c4 later consume, not three independent meanings of the parameter.
+#   reachability (not reinterpreted) by Phase 0's entry gate: these three
+#   reads are the gate checking the same choice that c3/c4 later consume,
+#   not three independent meanings of the parameter.
 #   Default is `service`, not `rest` — most legacy JSF apps are
 #   postback/ViewState-driven with no REST boundary; `rest` assumes a
 #   boundary that typically doesn't exist, and `ui` is where Phase C's

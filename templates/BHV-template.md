@@ -11,9 +11,9 @@
   in isolation. 'scenarios' and 'decision_tables' are required by that
   schema but deliberately do not appear in the frontmatter itself; they are
   markdown content by design, since they're meant to be read, not just
-  machine-validated. (This fixes D1/D2, REVIEW.md — a previous version of
-  this comment claimed "the frontmatter block... must validate against"
-  the schema, which was never literally true.)
+  machine-validated. (A previous version of this comment claimed "the
+  frontmatter block... must validate against" the schema, which was never
+  literally true.)
 
   Do not add fields to either the frontmatter or the Scenarios/Decision
   tables sections that aren't in the schema; add them to the schema first.
@@ -42,7 +42,7 @@ sizing:
   # produced measured coverage for this behavior (status: coverage-triaged
   # or later) — the ratio is a proxy used only before real coverage data
   # exists (docs/metrics.md #1, "Expiry"). A status of coverage-triaged with
-  # a live density_band_status is a defect (D5, REVIEW.md).
+  # a live density_band_status is a defect.
 ---
 
 <!--
@@ -124,7 +124,7 @@ the pack's `behaviors/scenario-bindings.json`. See `docs/spec-pack.md`.
   itself, not this row, is the source of truth for the exact condition
   combinations. **This row is not independently rendered** by `c3` — see
   `templates/renderers/*.md`; it's accounted for via the table's own
-  rendered output instead (D4, REVIEW.md).
+  rendered output instead.
 
 ## Decision tables (if any)
 

@@ -65,8 +65,8 @@ its `legacy_refs` spans exercised by its rendered tests, as measured by
   triaged individually; the remainder reach the log as `not_sampled`. The
   sampling rate is recorded per-application as part of the triage log
   deliverable — this framework mandates recording the rate, not a specific
-  value, since the right rate is calibration data from a pilot
-  (`REVIEW.md` §4.5), not a desk decision. A class whose sampled branches
+  value, since the right rate is calibration data from a pilot, not a desk
+  decision. A class whose sampled branches
   show an elevated `missing_scenario` rate is escalated to full triage for
   that class, regardless of the sampling rate — a bad signal on the sample
   is not averaged away.
@@ -141,7 +141,7 @@ property of the pipeline's semantic reliability, not of any single `BHV`.
 **Threshold:** none fixed here. This is the one metric this framework
 currently has no structural check for and no proxy against — every other
 metric in this file validates shape or measured coverage, not whether an
-LLM step's judgment was actually correct (REVIEW.md §1.3). It exists to be
+LLM step's judgment was actually correct. It exists to be
 watched, not thresholded, until a pilot establishes what rate is normal.
 
 **Action:** a rate that is non-trivial and not trending down after repeated

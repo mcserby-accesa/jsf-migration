@@ -2,7 +2,7 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "bhv.schema.json",
   "title": "Canonical BHV-####.md, hydrated representation",
-  "description": "The one canonical shape a behavior document must validate against, regardless of which step (b4, c1, c2) last wrote to it. This validates the HYDRATED representation of a BHV-####.md — the YAML frontmatter block merged with the parsed '## Scenarios' table (-> scenarios) and '## Decision tables' section (-> decision_tables), assembled by whatever parses the .md file, not the raw frontmatter block in isolation. Fixes D1/D2 (REVIEW.md): 'scenarios' and 'decision_tables' are required content this schema validates, but they live in Markdown body sections, not the YAML frontmatter, in the .md file itself — see templates/BHV-template.md's header comment.",
+  "description": "The one canonical shape a behavior document must validate against, regardless of which step (b4, c1, c2) last wrote to it. This validates the HYDRATED representation of a BHV-####.md — the YAML frontmatter block merged with the parsed '## Scenarios' table (-> scenarios) and '## Decision tables' section (-> decision_tables), assembled by whatever parses the .md file, not the raw frontmatter block in isolation. 'scenarios' and 'decision_tables' are required content this schema validates, but they live in Markdown body sections, not the YAML frontmatter, in the .md file itself — see templates/BHV-template.md's header comment.",
   "type": "object",
   "required": ["id", "title", "taxonomy", "status", "risk_tier", "legacy_refs", "covers", "scenarios"],
   "additionalProperties": false,
@@ -27,7 +27,7 @@
       "default": false,
       "description": "Human-set. True forces risk_tier: full regardless of taxonomy — for a behavior that touches money, authorization, or a state transition but whose taxonomy wouldn't otherwise trigger full triage."
     },
-    "bpmn_source_engine": { "type": "string", "description": "Only present when taxonomy == process; copied verbatim from framework.yaml. Renamed from bpmn_target (REVIEW.md §5.4 item 3) — engine continuity is now a checked Phase 0 precondition, not an informational label; see docs/phase-0-environment.md." },
+    "bpmn_source_engine": { "type": "string", "description": "Only present when taxonomy == process; copied verbatim from framework.yaml. Renamed from bpmn_target: the framework records which engine's execution semantics the carried-over .bpmn files assume, and has no opinion on the target engine. See DECISIONS.md, 'BPMN definitions are shipped as discovered'." },
     "neighborhood_diagram": {
       "type": "string",
       "description": "Mermaid source for this behavior's capped 2-hop neighborhood, generated deterministically alongside b3 from the same neighborhood_nodes/neighborhood_edges — never hand-edited, never LLM-authored. See docs/phase-b-behaviors.md, 'Neighborhood diagram.'"
@@ -107,7 +107,7 @@
     },
     "decision_tables": {
       "type": "array",
-      "description": "Fixes D2 (REVIEW.md): decision tables are canonical content c3 renders and c6 validates, but were previously unrepresentable under additionalProperties: false. Parsed from the '## Decision tables' section of the .md file, one entry per DT-BHV-####-NN table.",
+      "description": "Decision tables are canonical content c3 renders and c6 validates, but were previously unrepresentable under additionalProperties: false. Parsed from the '## Decision tables' section of the .md file, one entry per DT-BHV-####-NN table.",
       "items": {
         "type": "object",
         "required": ["table_id", "sub_conditions", "rows"],

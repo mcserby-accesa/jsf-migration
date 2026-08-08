@@ -45,7 +45,7 @@ Phase A requires Phase 0 to have passed (see `docs/phase-0-environment.md`).
 | `DB` | Database object | A table, trigger, or stored procedure (`kind` field distinguishes them) | DB catalog introspection |
 | `EL` | Raw EL expression | One `rendered`/`disabled`/`required`/`value` (or other conditional) EL attribute on one JSF component, pre-interpretation | View DOM scanner |
 | `CFG` | Config declaration | A `faces-config.xml` managed-bean declaration, or a `web.xml` filter/servlet relevant to reaching a screen | Config scanner |
-| `AUTHZ` | Authorization constraint | One `web.xml` `<security-constraint>`, or one class/method-level `@RolesAllowed`/equivalent annotation | Auth scanner (D14, REVIEW.md — closed) |
+| `AUTHZ` | Authorization constraint | One `web.xml` `<security-constraint>`, or one class/method-level `@RolesAllowed`/equivalent annotation | Auth scanner |
 | `AUTHN` | Authentication configuration | The application's `<login-config>` (auth method, realm, form login/error pages) plus its declared `<security-role>` vocabulary — exactly one node per application | Auth scanner (see "The identity model" below) |
 
 Custom converters and validators (`@FacesConverter`/`@FacesValidator` classes, or
@@ -160,7 +160,7 @@ so they need graph *edges* for traceability, not an EL-style lift.
 | `DERIVED_FROM` | `RULE` → `EL`/`TASK`/`DB`/`SVC` | Traceability from a lifted rule back to its raw source expression, DB trigger/procedure body (`a6`), or derivation method (`a7`) — see below |
 | `VALIDATED_BY` | `SCR`(component) → `SVC` | A component is checked by this custom `@FacesValidator` class |
 | `CONVERTED_BY` | `SCR`(component) → `SVC` | A component's value is converted by this custom `@FacesConverter` class |
-| `RESTRICTS` | `AUTHZ` → `SCR`/`SVC` | An authorization constraint gates access to this screen or method (D14, closed) |
+| `RESTRICTS` | `AUTHZ` → `SCR`/`SVC` | An authorization constraint gates access to this screen or method |
 | `COMPOSES_INTO` | `SCR`/`TPL` → `TPL` | This view (or nested template) renders inside that template's frame |
 | `INCLUDES` | `SCR`/`TPL` → `TPL` | This view pulls that fragment/composite component in at a position in its layout tree |
 | `COVERS` | `BHV` → any node | Phase B only: a behavior claims this inventory node as part of its scope |
@@ -178,7 +178,7 @@ not how to implement it.
    session beans/services/DAOs (framework-specific annotations are an
    application-level config, not hardcoded here) **and for
    `@FacesConverter`/`@FacesValidator` classes**, which this same rule
-   extracts as ordinary `SVC` nodes (D14 — closed: their logic runs as
+   extracts as ordinary `SVC` nodes (their logic runs as
    normal JVM bytecode, visible to JaCoCo like any other service class, so
    they need graph edges for traceability, not an EL-style lift). Record
    every method call to another such class as a candidate `INVOKES` edge and
@@ -261,8 +261,7 @@ not how to implement it.
    default was. These two facts plus container kind account for most of
    whether a rebuilt screen is recognizable as the same screen, and both are
    syntactic reads rather than judgments.
-3. **Auth scan** (`AUTHZ` + `AUTHN` nodes, `RESTRICTS` candidate edges, D14 —
-   closed): parse `web.xml` `<security-constraint>` blocks and scan for
+3. **Auth scan** (`AUTHZ` + `AUTHN` nodes, `RESTRICTS` candidate edges): parse `web.xml` `<security-constraint>` blocks and scan for
    `@RolesAllowed`/equivalent method- and class-level annotations. Each
    becomes one `AUTHZ` node with a `RESTRICTS` edge to the `SCR`/`SVC` it
    protects. The same pass emits exactly one `AUTHN` node for the
@@ -349,7 +348,7 @@ item (`DECISIONS.md`, principle 4):
 - `a6-lift-db-logic`: turns one DB trigger/stored-procedure body into a
   plain-language rule description and a candidate `RULE` node stub, with a
   `DERIVED_FROM` edge back to the `DB` node — the same mechanism as `a3`,
-  applied to the other place JaCoCo can't see (D10, closed: trigger/procedure
+  applied to the other place JaCoCo can't see (trigger/procedure
   logic executes inside the DB engine, not the JVM, so it's exactly as
   coverage-invisible as EL and needs the identical lift + no-`c4`-coverage
   bookkeeping).
@@ -380,7 +379,8 @@ Everything else new in this document — `AUTHZ` and `TPL` nodes,
 the page/service structural skeletons, the layout tree, the application
 shell, and the captured visual reference — is produced by extractors alone.
 No new LLM judgment was needed for any of it; that was the point of routing
-D14, the skeleton work, and the layout work through mechanical extraction
+the auth scan, the skeleton work, and the layout work through mechanical
+extraction
 rather than an implementation-time model reading raw source (see "Structural
 skeletons" and "Layout" below, and `DECISIONS.md`). `a8` is a script step for
 the same reason: it captures what the application rendered, it does not

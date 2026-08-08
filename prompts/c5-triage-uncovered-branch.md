@@ -142,4 +142,4 @@ Expected output:
   not by re-running every call twice and comparing — the previous version
   of this note described a double-call escalation trigger that contradicted
   this step's own `idempotent: true` and doubled the highest-volume step in
-  the pipeline (REVIEW.md D8). Do not reintroduce it.
+  the pipeline. Do not reintroduce it.

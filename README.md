@@ -196,7 +196,6 @@ against unchanged input does no work twice.
 ```
 framework.yaml            parameters, with defaults and rationale
 DECISIONS.md              what's settled, what's still open
-REVIEW.md                 a critical review of this framework, and its history
 
 docs/
   method.md               the method end to end — read first

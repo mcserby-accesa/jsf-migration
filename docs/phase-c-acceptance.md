@@ -118,7 +118,7 @@ Input: **one enclosing method or class's** worth of uncovered branches at
 once, **hard capped at 6 per call** — file:line, surrounding code context,
 and the behavior each belongs to (bounded: one method/class, one batched
 call of at most 6, one judgment per branch within it). This batches by
-enclosing scope rather than calling once per branch (REVIEW.md §1.2, P0-3):
+enclosing scope rather than calling once per branch:
 most uncovered branches in a method/class share enough context that
 classifying them together costs the same tokens as one branch alone would,
 at a fraction of the call count, with zero loss of completeness — batching
@@ -144,14 +144,14 @@ much of `c5`'s output this step is exigent about:
   triaged; the rest are recorded in the triage log as `not_sampled`. The
   sampling rate is chosen and recorded per-application — this framework
   specifies the mechanism, not the rate, since the right rate is calibration
-  data from a pilot, not a desk decision (REVIEW.md §4.5). Whatever the rate,
+  data from a pilot, not a desk decision. Whatever the rate,
   if a class's *sampled* branches show an unusually high rate of
   `missing_scenario`, that class's remaining branches must be triaged in
   full — a bad signal on the sample overrides the sampling rate, rather than
   being averaged away by it.
 
 An unconditional 100%-of-everything gate looks rigorous and gets quietly
-ignored in practice on a real application's branch count (REVIEW.md §1.2);
+ignored in practice on a real application's branch count;
 this risk tiering is meant to be a gate that is actually enforced, at the cost of
 being calibrated rather than absolute.
 
@@ -206,8 +206,8 @@ step adds the one semantic check the framework has:
 3. **Track the spec-defect rate** — the fraction of reviewed items a human
    overturns. See `docs/metrics.md` #7. This is the number that says whether
    the pipeline is actually producing correct specs, as opposed to merely
-   schema-valid ones (REVIEW.md §1.3: a schema-valid, confidently wrong
-   answer passes every structural gate in this framework).
+   schema-valid ones — a schema-valid, confidently wrong answer passes every
+   structural gate in this framework.
 
 The sample size for (1) is calibration data, deferred to pilot evidence, same
 as `c5`'s sampling rate — the mechanism is decided now, the rate is not.

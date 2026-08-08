@@ -22,9 +22,9 @@ combination — rendering the row a second time as its own `@Test` would
 duplicate, not add, coverage. This row is still accounted for by `c3`'s
 "no silent drops" validator via its `decision_table_ref` association (see
 `steps/c3-render-tests.yaml`), not via an independent rendered method. This
-is the resolution to D4 (REVIEW.md) — the previous version of this renderer
-left this case unspecified and it was resolved by hand in `examples/`,
-which is exactly what this rule exists to prevent.
+case was left unspecified by a previous version of this renderer and was
+resolved by hand in `examples/`, which is exactly what this rule exists to
+prevent.
 
 ## Mapping rules
 
@@ -95,5 +95,5 @@ whose assertions and arrangement calls are derived mechanically from the
 `BHV`; wiring it to actually run against the booted legacy app (`c4`) is a
 separate, explicit next step — see `docs/phase-0b-walking-skeleton.md` for
 why that step is validated on one behavior before Phase A runs at volume,
-and REVIEW.md D3 for why this skeleton must contain no invented literals
-that step can't actually derive mechanically.
+This skeleton must contain no invented literals that step cannot actually
+derive mechanically.

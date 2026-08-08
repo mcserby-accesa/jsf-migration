@@ -73,7 +73,7 @@ pilot can correct them.
   exercise against the legacy app. Default is `service`, not `rest`: most
   legacy JSF apps have no REST boundary, and `service` reaches the backing
   beans where JSF business logic actually lives. Confirm per-application at
-  the Phase 0 gate — do not assume the default. See REVIEW.md §5.3.
+  the Phase 0 gate — do not assume the default.
   There is deliberately **no** target-side seam parameter: the framework
   never tests the target system. Phase D's browser-driven validation runs
   against the *legacy* app, which is a fixed seam rather than a choice.
@@ -99,8 +99,7 @@ pilot can correct them.
   practice, which is worse than a calibrated one that's actually enforced.
   `c5` also batches by enclosing method/class rather than calling once per
   branch. The tiering mechanism is decided now; the sampling rate itself is
-  calibration data, deferred to pilot evidence. See `docs/metrics.md` #3 and
-  REVIEW.md P0-3.
+  calibration data, deferred to pilot evidence. See `docs/metrics.md` #3.
 - A semantic verification layer exists alongside the structural validators,
   because none of `validators/README.md`'s checks can catch a wrong lift or
   a semantically incorrect decision table. Minimum viable version:
@@ -109,16 +108,16 @@ pilot can correct them.
   every `dead_code` verdict and every `rule` behavior in a `high_risk`
   domain. Spec-defect rate found in review is tracked (`docs/metrics.md` #7)
   as the number that actually tells you whether the pipeline works. See
-  `docs/phase-c-acceptance.md`, "Step 5b," and REVIEW.md P0-4.
+  `docs/phase-c-acceptance.md`, "Step 5b."
 - A walking-skeleton gate runs once per application, between Phase 0 and
   Phase A: one behavior hand-carried through `c1 → c3 → c4` until a rendered
   test executes against the booted legacy app and produces attributable
   coverage, before Phase A inventory work runs at volume. This is a standing
   part of the framework's structure (documented in
   `docs/phase-0b-walking-skeleton.md`), not only the one-off validation
-  exercise this skeleton itself is currently pending (REVIEW.md §4) — the
-  gate is designed now; running it against a real application is separate
-  and still blocked on having one. See REVIEW.md P0-1.
+  exercise this skeleton itself is currently pending — the gate is designed
+  now; running it against a real application is separate and still blocked
+  on having one.
 - **Structural skeletons close the "how does an agent implement a page/
   service" gap without breaking principle 5.** Phase A extracts a
   page skeleton per `SCR` (field groups, the layout tree, abstracted widget
@@ -199,8 +198,9 @@ file's one-parameter-one-consumer rule.
 **What the reversal deletes:** the `d0`–`d6` step sketches; `target_test_seam`;
 `layout_fidelity` / `service_boundary_fidelity` and the structural-diff
 fidelity validator; and the legacy-table→target-entity schema mapping step.
-REVIEW.md §5 stays as the historical record of the superseded design — this
-file, not REVIEW.md, is authoritative on what is settled.
+This file is the sole authority on what is settled. The superseded design is
+not preserved elsewhere, and does not need to be: what mattered about it was
+the reason for the reversal, which is recorded above.
 
 **What survives, moved upstream into Phase C:** the endpoint-contract
 derivation formerly sketched as `d1b`. See the next entry.
@@ -246,7 +246,7 @@ step refuses to run without the file rather than guessing. This also keeps
 the scope line clean — the framework consumes an architecture decision, it
 does not make one.
 
-Trigger/stored-procedure logic (D10) remains closed via `a6-lift-db-logic` in
+Trigger/stored-procedure logic remains handled via `a6-lift-db-logic` in
 Phase A: the same lift mechanism as EL, since trigger and procedure bodies
 execute inside the DB engine and are equally invisible to JaCoCo.
 
@@ -400,7 +400,7 @@ trace-back only, children in document order, and a `render_guard` naming the
 `EL`/`RULE` that conditions each container. Leaves point into `form_fields` /
 `data_tables` / `labels` rather than restating them: the tree states
 position, those arrays state substance. No new LLM judgment — the same
-argument that carried D14 and the structural skeletons.
+argument that carried the auth scan and the structural skeletons.
 
 `TPL` nodes and the `COMPOSES_INTO`/`INCLUDES` edges come with it, and so
 does the application's navigation menu, which existed nowhere in the graph:
@@ -501,7 +501,7 @@ a pilot and correct here.
 | 2 | Escalation retry count before a step is treated as failing | 3 consecutive schema/confidence failures | each `steps/*.yaml` `escalate:` block |
 | 3 | Node ID prefixes beyond the three given (`SCR`, `SVC`, `BHV`) | Added `RULE`, `PROC`, `TASK`, `JOB`, `NAV`, `DB`, `EL`, `CFG`, `AUTHZ`, `AUTHN`, `TPL` — see `docs/phase-a-inventory.md` | inventory schema |
 | 4 | Default `combinatorial_reducer` | `pict` (freely available, Microsoft-licensed, wide precedent) over `acts` | `framework.yaml` |
-| 5 | Default `spec_format` | `gherkin` — more legible to non-engineers reviewing behavior specs during triage; `junit` and `both` remain first-class options. **`framework.yaml` corrected 2026-08-07** to actually default to `gherkin`; it previously defaulted to `both`, contradicting this row (REVIEW.md D7) | `framework.yaml` |
+| 5 | Default `spec_format` | `gherkin` — more legible to non-engineers reviewing behavior specs during triage; `junit` and `both` remain first-class options. **`framework.yaml` corrected 2026-08-07** to actually default to `gherkin`; it previously defaulted to `both`, contradicting this row | `framework.yaml` |
 | 6 | Default `bpmn_source_engine`/`bpmn_target_engine` | Both left as `camunda7` placeholders. Engine continuity is a checked Phase 0 precondition, and stays one even with implementation out of scope: the spec pack ships the `.bpmn` files byte-identically, which is only a valid deliverable if the target engine can execute them | `framework.yaml`, `docs/phase-0-environment.md`, `docs/spec-pack.md` |
 | 7 | How "identifying reusable rule behaviors" gets mechanically pre-reduced | Clone/AST-similarity detection (`b1-detect-rule-similarity-candidates`, a script step) proposes candidate clusters of 2–5 items; a bounded step confirms each candidate in isolation. No step ever asks a model to scan the whole codebase for duplication. | `steps/b1-*.yaml`, `steps/b2-*.yaml` |
 | 8 | Rolling window for the escalation-rate metric | Last 20 calls to a given step | `docs/metrics.md` |

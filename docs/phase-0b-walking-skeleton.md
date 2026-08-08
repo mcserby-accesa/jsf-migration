@@ -29,8 +29,8 @@ hand-authored literals `c3` can't mechanically derive), that is dramatically
 cheaper to discover from one behavior than from fifty.
 
 This is the same mechanism the current skeleton's own validation exercise
-uses on itself before it has met a real codebase (see REVIEW.md §4,
-`docs/method.md`'s pipeline diagram) — Phase 0b is that discipline written
+uses on itself before it has met a real codebase (see `docs/method.md`'s
+pipeline diagram) — Phase 0b is that discipline written
 into the framework as something every future application runs, not only a
 one-off check performed on this skeleton.
 
@@ -96,7 +96,7 @@ that turned out false. Report what blocked it; likely candidates:
   paper over.
 
 A failure here is scoped and reported, the same way it would be for the
-framework's own validation exercise (REVIEW.md §4.2) — this gate exists
+framework's own validation exercise — this gate exists
 specifically so that finding surfaces on one behavior, not fifty.
 
 ## Re-checking

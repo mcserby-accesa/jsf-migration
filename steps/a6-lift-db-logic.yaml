@@ -7,7 +7,7 @@ description: >
   to the source DB node. The same mechanism as a3, applied to the other
   place JaCoCo can't see: trigger/procedure logic executes inside the DB
   engine, not the JVM, so it is exactly as coverage-invisible as EL and
-  needs the identical lift (D10, REVIEW.md — closed).
+  needs the identical lift.
 input:
   type: single_node
   source: nodes.jsonl, kind == "db" with raw_facts.kind in
