@@ -9,7 +9,7 @@ description: >
   behaviors/scenario-bindings.json, data/fixture-order.json and
   auth/identity.json, render views/wireframes/ from views/pages.json, copy
   a8's captured screen references and their index, carry
-  handover/ui-conventions.yaml if one was authored, seed
+  handover/target-conventions.yaml, seed
   triage/open-questions.jsonl and an empty behaviors/progress.jsonl, write
   manifest.json and the generated README index, then run the
   spec_pack_complete gate. This is the framework's terminal step — its
@@ -21,8 +21,7 @@ input:
     tests, c3b's verification reports, the application triage log, c7/c8's
     operation fragments and client_side_only verdicts, c7b's scenario
     bindings, a8's capture report and the captured images, the legacy
-    repository's .bpmn files, framework.yaml, api-conventions.yaml, and
-    ui-conventions.yaml if one was authored
+    repository's .bpmn files, framework.yaml, target-conventions.yaml
   bound: not applicable (deterministic script over the whole application)
 output_schema: schemas/c9-assemble-spec-pack.schema.json
 validators:
@@ -79,13 +78,18 @@ screen_references:
     steps/a8-capture-screen-references.yaml.
 carried_inputs:
   description: >
-    handover/ui-conventions.yaml (templates/ui-conventions.yaml) is copied
-    verbatim and hashed if the application authored one, and recorded absent
-    if it did not. Unlike api-conventions.yaml it is OPTIONAL and no step
-    reads it: it records how the extracted layout maps onto the target UI
-    stack, which is a decision the framework can carry but cannot apply,
-    because applying it is implementation. A pack without it passes every
-    gate; what the gate requires is that the manifest states which.
+    handover/target-conventions.yaml (templates/target-conventions.yaml) is
+    copied verbatim and hashed. Its `api:` and `identity:` sections are
+    REQUIRED — c7 already refused to run without them, so a pack cannot reach
+    this step without them. Its `process:` and `ui:` sections are RECORDED:
+    no step reads them, and this step notes per-section in
+    conventions_sections_recorded whether each was authored.
+
+    That asymmetry is the point. A recorded-only section holds a decision the
+    framework can carry and cannot apply, because applying it is
+    implementation. A pack whose author left `process:` empty passes every
+    gate — but the PROC nodes' blocking open questions are still there,
+    unanswered, which is what a handover conversation is for.
 order_derivation:
   description: >
     behaviors/order.json (schemas/order.schema.json) is a projection of the
@@ -129,6 +133,31 @@ open_questions_seeding:
     endpoint, a Step 5b overturned dead_code verdict. OQ ids are assigned in
     a stable order (category, then subject id) so a re-run reproduces them,
     and are never reused or renumbered.
+
+    Two seeds are this step's own, because the state they read is the
+    conventions file rather than an upstream step's output:
+
+    - Every active PROC node seeds an undecided_process_engine entry with
+      blocks: true when target-conventions.yaml has no `process:` section, or
+      its target_engine is unset. The pack ships every .bpmn byte-identically
+      on the premise that the implementer runs the originals; nothing in this
+      framework decides what executes them, and the first pilot's
+      implementing agent resolved that silence by deleting the engine and
+      reimplementing the orchestration ad hoc. "No engine" is a legitimate
+      answer (process.target_engine: none) — arriving at it by deletion, with
+      nothing recorded, is not. It blocks because a process behavior cannot
+      be built without the answer.
+    - Every AUTHZ node with constraint_type web.xml seeds an
+      unenforced_url_constraint entry when identity.url_constraint_policy is
+      `drop`, or when the screens under its url_pattern produced no
+      operations for its roles to land on. A URL pattern protecting a
+      server-rendered page has no equivalent in an SPA, and a constraint that
+      quietly failed to carry over is indistinguishable from one that was
+      never needed.
+
+    Neither is authored: both read a state that already exists. What this
+    step adds is that the state becomes a question with a place to record the
+    answer.
 
     The gate checks that seeded entries are well-formed, NOT that they are
     answered. A pack ships with open questions by design; what it must not

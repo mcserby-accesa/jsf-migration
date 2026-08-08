@@ -3,7 +3,7 @@ phase: C
 kind: script
 description: >
   Mechanically derive OpenAPI operation fragments from the legacy surface
-  plus the application's api-conventions.yaml: one per public method on
+  plus the application's target-conventions.yaml: one per public method on
   every active SVC node, one read operation per active SCR node, and one
   verdict per active NAV node and per EL-derived RULE. Resource name, path,
   verb, parameters, request and response schemas, status codes and security
@@ -16,24 +16,24 @@ input:
     nodes.jsonl (active SVC nodes with public_methods, active DB nodes with
     columns, active SCR nodes with form_fields/data_tables, active NAV nodes,
     EL-derived RULE nodes, active AUTHZ nodes for role requirements, the
-    AUTHN node) + the application's api-conventions.yaml
+    AUTHN node) + the application's target-conventions.yaml
   fields: [svc_nodes, db_nodes, scr_nodes, nav_nodes, el_rule_nodes,
-    authz_nodes, authn_node, api_conventions]
+    authz_nodes, authn_node, target_conventions]
   bound: not applicable (deterministic script over the whole graph)
 output_schema: schemas/c7-derive-endpoint-contracts.schema.json
 validators:
-  - api-conventions.yaml is present and every required key is set; a missing
+  - target-conventions.yaml is present and every required key is set; a missing
     or partial conventions file FAILS this step rather than defaulting
-  - every emitted operation's path is built from api_conventions
+  - every emitted operation's path is built from target_conventions
     (base_path, path_case, resource_number, strip_suffixes) — never from a
     literal legacy class or method name
   - every request/response schema field resolves to a real DB node column or
     a real method param/return type; no invented fields
   - a data_tables-backed collection operation uses that table's extracted
-    page_size, NOT api_conventions.default_page_size (the extracted value
+    page_size, NOT target_conventions.api.default_page_size (the extracted value
     wins — docs/phase-a-inventory.md, "Structural skeletons")
   - roles are copied from the AUTHZ nodes that RESTRICT the owning SVC when
-    api_conventions.carry_legacy_roles is true; never inferred
+    target_conventions.identity.carry_legacy_roles is true; never inferred
   - every SVC method appears exactly once in the output, either as a mapped
     operation or as an unmapped entry with a reason
   - every active SCR node appears exactly once, either as a read operation
@@ -44,7 +44,7 @@ validators:
     with a reason. A navigation rule usually becomes a client route rather than
     an endpoint; recording that verdict is what distinguishes "decided" from
     "not looked at"
-  - the authentication operations required by api_conventions.auth_semantics
+  - the authentication operations required by target_conventions.identity.auth_semantics
     are emitted when the AUTHN node's auth_method is not "none", with their
     paths and status codes taken from that section — never invented here
 escalate:
@@ -58,7 +58,7 @@ resumable: true
 notes: >
   This step exists as a script, ahead of any model call, because principle 2
   applies to the API surface exactly as it applies to inventory: the rules in
-  api-conventions.yaml decide the overwhelming majority of operations
+  target-conventions.yaml decide the overwhelming majority of operations
   outright, and routing those through a model would be a slower, less
   reliable way to apply a lookup table. c8 sees only the residue.
 

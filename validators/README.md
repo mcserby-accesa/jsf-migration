@@ -354,7 +354,9 @@ file is the authority on *when it runs*.
   `status` is set; every `assumed` entry states its `assumption`; every
   upstream state that should seed an entry has one (a null `value_domain`, a
   lift with `open_value_domain`, an external `credential_store`, a
-  `not-observable` binding, a `c8`-judged endpoint).
+  `not-observable` binding, a `c8`-judged endpoint, an active `PROC` node with
+  no chosen target engine, a `web.xml` `AUTHZ` constraint with nowhere to
+  land).
 - **Output:** `{ "passed": bool, "failures": ["<OQ id or source>: <detail>"] }`.
 - **On failure:** blocks pack handover.
 - **Not checked:** whether any question is answered. A pack ships with open
@@ -428,7 +430,7 @@ file is the authority on *when it runs*.
 - **Output:** `{ "passed": bool, "failures": ["<path> <verb>: <collision or dangling ref>"] }`.
 - **On failure:** blocks pack handover. A path collision usually means two
   legacy services map onto one resource name — fix `strip_suffixes` or the
-  resource derivation in `api-conventions.yaml`, not the generated file.
+  resource derivation in `target-conventions.yaml`, not the generated file.
 
 ## `bpmn_copied_verbatim`
 
@@ -504,10 +506,12 @@ file is the authority on *when it runs*.
   `scenario-bindings.json`, `replaced_by_scenario_id`s in behavior
   documents, and `OQ-####` ids referenced from anywhere; (4)
   `manifest.json` lists every file present and every file it lists exists;
-  (5) each of the validators above passed; (6) `handover/ui-conventions.yaml`
-  is either present and hashed, or recorded absent — the file is optional
-  (nothing derives from it), and the gate checks only that the manifest says
-  which.
+  (5) each of the validators above passed; (6)
+  `handover/target-conventions.yaml` is present and hashed, with its `api:`
+  and `identity:` sections complete, and `conventions_sections_recorded`
+  states for each of `process:` and `ui:` whether it was authored — those two
+  are optional (nothing derives from them) and the gate checks only that the
+  manifest says which.
 - **Output:** `{ "passed": bool, "failures": ["<check>: <detail>"] }`.
 - **On failure:** the pack is not handed over. See `docs/spec-pack.md`,
   "Completeness gate" — a partial pack presented as a complete one is the one

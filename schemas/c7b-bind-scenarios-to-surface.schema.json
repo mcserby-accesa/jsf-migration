@@ -10,7 +10,7 @@
     "bhv_id": { "type": "string", "pattern": "^BHV-[0-9]{4,}$" },
     "conventions_hash": {
       "type": "string",
-      "description": "Hash of the api-conventions.yaml these bindings were decided against. A conventions change invalidates them, the same way it invalidates c7's operations — bindings are target-side facts, and the target's conventions are their input."
+      "description": "Hash of the target-conventions.yaml these bindings were decided against. A conventions change invalidates them, the same way it invalidates c7's operations — bindings are target-side facts, and the target's conventions are their input."
     },
     "bindings": {
       "type": "array",

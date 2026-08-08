@@ -8,7 +8,7 @@
   "properties": {
     "conventions_hash": {
       "type": "string",
-      "description": "Hash of the api-conventions.yaml this run consumed. Recorded so a pack can prove which conventions produced its API, and so a conventions change forces a re-derive rather than silently mixing two vintages."
+      "description": "Hash of the target-conventions.yaml this run consumed. Recorded so a pack can prove which conventions produced its API, and so a conventions change forces a re-derive rather than silently mixing two vintages."
     },
     "operations": {
       "type": "array",

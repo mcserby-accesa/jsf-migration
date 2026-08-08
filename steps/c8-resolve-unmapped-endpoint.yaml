@@ -44,12 +44,12 @@ idempotent: true
 resumable: true
 notes: >
   This step is deliberately narrow. It does not design an API — c7's rules
-  and api-conventions.yaml already did that. It answers one question about
+  and target-conventions.yaml already did that. It answers one question about
   one method that the rules could not answer, which is what keeps it a
   bounded, single-judgment call rather than an architecture exercise.
 
   A high rate of items reaching this step is a signal about
-  api-conventions.yaml (its verb_prefixes are too narrow for this codebase's
+  target-conventions.yaml (its verb_prefixes are too narrow for this codebase's
   naming), not about the model. Fix the conventions file; see docs/metrics.md #6.
 
   Every resolution this step produces is judgment rather than derivation, so

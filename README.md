@@ -135,12 +135,13 @@ you're building toward.
 **2. Configure.** Copy [framework.yaml](framework.yaml) and set the handful
 of parameters for your application — output format, coverage tool, BPMN
 engine, which layer to test against. Each parameter documents what it does
-and what reads it. Copy [templates/api-conventions.yaml](templates/api-conventions.yaml)
-too, and fill in your target API conventions; the endpoint derivation refuses
-to run without it. [templates/ui-conventions.yaml](templates/ui-conventions.yaml)
-is optional and read by nothing — it records how the extracted layout maps
-onto your UI stack, and ships in the pack so that decision is made once
-rather than once per screen. Note that the framework does
+and what reads it. Copy [templates/target-conventions.yaml](templates/target-conventions.yaml)
+too. Its `api:` and `identity:` sections are required — the endpoint
+derivation refuses to run without them. Its `process:` (which BPMN engine
+runs your processes) and `ui:` (how the extracted layout maps onto your
+component library) sections are read by nothing and ship in the pack anyway,
+so those decisions are made once rather than once per process and once per
+screen. Note that the framework does
 not specify which LLM to use; steps say only whether they need a model or a
 script, and every model-driven step is bounded small enough that a cheap
 model handles it.
@@ -209,8 +210,7 @@ validators/README.md      what every validator checks and when
 prompts/*.md              prompt template + examples, per model-driven step
 templates/
   BHV-template.md         the behavior document structure
-  api-conventions.yaml    your target API conventions — fill this in
-  ui-conventions.yaml     your target UI conventions — optional
+  target-conventions.yaml your target decisions — api, identity, process, ui
   renderers/*.md          how a behavior becomes Gherkin / JUnit,
                           how a layout tree becomes a wireframe
 examples/                 one fully worked behavior, both renderings

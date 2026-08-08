@@ -69,7 +69,7 @@ covered_nodes: {{covered_nodes}}
 candidate_operations: {{candidate_operations}} # operation_id, path, verb,
                                                # source_node_id, statuses
 client_side_only: {{client_side_only}}         # c7's NAV/RULE verdicts
-translation_policy: {{translation_policy}}     # api-conventions.yaml's
+translation_policy: {{translation_policy}}     # target-conventions.yaml's
                                                # auth_semantics +
                                                # navigation_semantics
 ```
@@ -170,6 +170,6 @@ Expected output (excerpt):
   an open-questions entry (`docs/spec-pack.md`). That is the intended
   volume: on a real application these are the decisions worth a reviewer's
   attention, and they should be a list, not a discovery.
-- Bindings are invalidated by a change to `api-conventions.yaml`, tracked
+- Bindings are invalidated by a change to `target-conventions.yaml`, tracked
   through `conventions_hash`. Re-run this step after re-running `c7`, never
   independently of it.

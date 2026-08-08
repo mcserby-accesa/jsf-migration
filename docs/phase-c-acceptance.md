@@ -215,7 +215,7 @@ as `c5`'s sampling rate — the mechanism is decided now, the rate is not.
 ## Step 5c — Derive the endpoint contract and bind scenarios to it (`c7`, script; `c7b`)
 
 `c7` derives the target REST contract mechanically from the legacy surface
-plus the application's `api-conventions.yaml` — see `docs/spec-pack.md`,
+plus the application's `target-conventions.yaml` — see `docs/spec-pack.md`,
 "The API contract." Two things about its scope matter here.
 
 First, the surface is the whole client-visible surface. A legacy JSF screen

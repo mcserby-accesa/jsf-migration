@@ -150,7 +150,7 @@ Expected output:
   endpoint ships in the pack and is discovered by whoever implements against
   it, much later and much more expensively.
 - A high proportion of methods reaching this step at all means
-  `api-conventions.yaml`'s `verb_prefixes` don't match this codebase's naming
+  `target-conventions.yaml`'s `verb_prefixes` don't match this codebase's naming
   habits. Extend that file — every method it maps is one this step never
   sees. See `docs/metrics.md` #6.
 - `action_bound: false` plus no `nav_outcomes` is the strongest available

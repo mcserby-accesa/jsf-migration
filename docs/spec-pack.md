@@ -43,7 +43,7 @@ Two further manifest kinds sit outside the original/projection pair because
 they are neither. `reference` (the screenshots) is a captured artifact
 nothing derives from: hashed for tamper-evidence, excluded from the
 regeneration check because re-photographing a page does not reproduce its
-bytes and never needed to. `carried_input` (`handover/ui-conventions.yaml`)
+bytes and never needed to. `carried_input` (`handover/target-conventions.yaml`)
 is a human-authored file copied in verbatim for the implementer. Neither can
 contradict an original, because neither is a source of any fact the pack
 asserts.
@@ -84,7 +84,7 @@ spec-pack/
       SCR-####--<state>.png      the legacy screen, as it rendered    [reference]
 
   handover/
-    ui-conventions.yaml          layout -> your UI stack     [carried input, optional]
+    target-conventions.yaml      api, identity, process, ui     [carried input]
 
   api/
     openapi.yaml                 the target REST contract, merged     [derived]
@@ -178,7 +178,7 @@ the only practical way for a reviewer to catch a layout tree that resolved a
 dynamic composition wrongly.
 
 **`handover/ui-conventions.yaml`** — Optional, and unlike
-`api-conventions.yaml` nothing derives from it. It records how the extracted
+`target-conventions.yaml` nothing derives from it. It records how the extracted
 layout maps onto the target UI stack: which component a `tabs` container
 becomes, whether a legacy fixed width survives, what happens to the shell.
 The framework can carry that decision but cannot apply it, because applying
@@ -197,6 +197,24 @@ copy hides — for each service task, listener, and gateway condition, which
 legacy class or expression it references, and which inventory node that
 resolves to. Carrying the file over is easy; rewiring what it points at is
 the actual work, and it needs to be enumerated rather than discovered late.
+
+Shipping the files byte-identically rests on a premise: that something in the
+target can execute them. **The framework does not decide what, and its
+silence on the point has been expensive.** The first pilot's implementing
+agent removed the process engine outright and reimplemented the orchestration
+by hand — which is a legitimate option, arrived at by deletion rather than by
+decision, leaving the carried-over `.bpmn` files as decoration and the lifted
+gateway conditions to be rediscovered.
+
+So every active `PROC` node now seeds a **blocking** open question, answered
+in `target-conventions.yaml`'s `process:` section: which engine runs these
+(the framework recommends an embedded Camunda-7-compatible engine for a
+Camunda 7 legacy app, since that is the only choice under which the
+byte-identical files stay runnable — but it recommends, it does not decide),
+and what happens to the files (`run-as-shipped`, `port`, or `reimplement`).
+Choosing `reimplement` is fine and changes what `bindings.json` is: no longer
+a rewiring list, but the enumeration of everything you must now write and
+test yourself.
 
 **`data/schema.json`** — Tables with columns, types, nullability, primary and
 foreign keys, and the value facts an implementer cannot derive from observing
@@ -259,7 +277,7 @@ What it cannot derive is **convention**: whether a resource is
 `/api/v1/leave-requests` or `/leaveRequest`, what an error body looks like,
 how pagination is expressed, how versioning works. Those are decisions about
 your target system, and this framework does not make them. They come from a
-human-authored `api-conventions.yaml`, written once per application — the
+human-authored `target-conventions.yaml`, written once per application — the
 same status as `framework.yaml`. No conventions file, no API contract; the
 step refuses rather than guessing.
 
@@ -312,7 +330,7 @@ indistinguishable from an equivalence.
 
 The bindings live outside the `BHV-####.md` documents on purpose. A behavior
 document describes the legacy application; a binding is a target-side fact
-derived from `api-conventions.yaml` and invalidated when it changes.
+derived from `target-conventions.yaml` and invalidated when it changes.
 Re-deriving the API contract must not rewrite fifty canonical specs.
 
 ## The open-questions register
@@ -331,6 +349,8 @@ The pipeline seeds it at assembly from states its own steps already record:
 | A column whose `value_domain` is `null` | which values are legal here is not knowable from the catalog |
 | A lift with `open_value_domain: true` | this rule tests membership of a set the source never enumerates |
 | An `AUTHN` node with `credential_store: external` | the credentials are not in this repository, and something must replace them |
+| A `web.xml` `AUTHZ` constraint with no operation to land on | this URL pattern protected a page the target does not have |
+| An active `PROC` node with no chosen target engine | **blocking** — the pack ships these `.bpmn` files to be run, and nothing says what runs them |
 | A scenario bound `not-observable`, or `preserves_legacy_meaning: false` | this assertion has no target equivalent, or has an adapted one |
 | A `c8` resolution — an endpoint decided by judgment rather than by rule | this part of the contract was a call, not a derivation |
 | A `dead_code` verdict overturned in Step 5b review | the pipeline classified this wrongly once |

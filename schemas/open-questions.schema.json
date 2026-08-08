@@ -2,7 +2,7 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "open-questions.schema.json",
   "title": "One line of the pack's triage/open-questions.jsonl",
-  "description": "The register of specification gaps: things the legacy application does not answer, that the pipeline decided under stated assumptions, or that it could not decide at all. Seeded by the pipeline at assembly (c9) from the states upstream steps already record — a null value_domain, a lift with open_value_domain, a scenario bound not-observable or preserves_legacy_meaning false, a credential_store of external, an operation resolved by c8's judgment rather than by rule. Append-only thereafter; the implementer appends resolutions rather than editing entries. Distinct from triage/triage-log.jsonl, which registers uncovered legacy BRANCHES; this registers unanswered SPEC questions, and the two are not substitutes.",
+  "description": "The register of specification gaps: things the legacy application does not answer, that the pipeline decided under stated assumptions, or that it could not decide at all. Seeded by the pipeline at assembly (c9) from the states upstream steps already record — a null value_domain, a lift with open_value_domain, a scenario bound not-observable or preserves_legacy_meaning false, a credential_store of external, a PROC node whose target engine nobody chose, an operation resolved by c8's judgment rather than by rule. Append-only thereafter; the implementer appends resolutions rather than editing entries. Distinct from triage/triage-log.jsonl, which registers uncovered legacy BRANCHES; this registers unanswered SPEC questions, and the two are not substitutes.",
   "type": "object",
   "required": ["id", "raised_by", "subject", "question", "status"],
   "additionalProperties": false,
@@ -14,7 +14,7 @@
     },
     "raised_by": {
       "type": "string",
-      "description": "The step whose output seeded this entry (a1, a3, a6, a7, c7, c7b, c8), or 'implementer' for one appended after handover."
+      "description": "The step whose output seeded this entry (a1, a3, a6, a7, c7, c7b, c8, c9), or 'implementer' for one appended after handover."
     },
     "subject": {
       "type": "array",
@@ -30,6 +30,8 @@
         "no_target_surface",
         "adapted_semantics",
         "external_credential_store",
+        "unenforced_url_constraint",
+        "undecided_process_engine",
         "absent_persistence_target",
         "judged_endpoint",
         "other"

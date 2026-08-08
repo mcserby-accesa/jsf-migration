@@ -2,14 +2,14 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "scenario-bindings.schema.json",
   "title": "The pack's behaviors/scenario-bindings.json",
-  "description": "Every scenario in the pack, and where the target system can observe what it asserts. A projection: c9 merges each behavior's c7b output, sorted by behavior id then scenario id, and adds nothing. Kept out of the BHV-####.md documents deliberately — those describe the legacy application, while a binding is a target-side fact derived from the API contract and invalidated when api-conventions.yaml changes. One fact, one place.",
+  "description": "Every scenario in the pack, and where the target system can observe what it asserts. A projection: c9 merges each behavior's c7b output, sorted by behavior id then scenario id, and adds nothing. Kept out of the BHV-####.md documents deliberately — those describe the legacy application, while a binding is a target-side fact derived from the API contract and invalidated when target-conventions.yaml changes. One fact, one place.",
   "type": "object",
   "required": ["conventions_hash", "bindings"],
   "additionalProperties": false,
   "properties": {
     "conventions_hash": {
       "type": "string",
-      "description": "The api-conventions.yaml every binding was decided against. Must equal the hash in manifest.json — bindings derived against different conventions than the shipped API contract describe a system the pack does not specify."
+      "description": "The target-conventions.yaml every binding was decided against. Must equal the hash in manifest.json — bindings derived against different conventions than the shipped API contract describe a system the pack does not specify."
     },
     "bindings": {
       "type": "array",

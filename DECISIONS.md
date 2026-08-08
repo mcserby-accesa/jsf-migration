@@ -77,20 +77,21 @@ pilot can correct them.
   There is deliberately **no** target-side seam parameter: the framework
   never tests the target system. Phase D's browser-driven validation runs
   against the *legacy* app, which is a fixed seam rather than a choice.
-- **BPMN definitions are shipped as discovered, not reasoned about.** The
-  spec pack carries the `.bpmn` files byte-identically, plus
-  `process/bindings.json` enumerating what every service task, listener, and
-  gateway condition references and which inventory node that resolves to.
-  Making those files run on the replacement's engine is the implementer's
-  work. The framework therefore has **no** `bpmn_target_engine` parameter and
-  no engine-continuity gate: it would have zero consumers, since no step here
-  deploys a process or inspects a target engine. `bpmn_source_engine` is kept
-  because it does have one — `b3` copies it into process-behavior frontmatter
-  as a traceability label, and the pack records it so a reader knows which
-  execution semantics the carried-over files assume. An earlier version made
-  continuity a checked Phase 0 precondition; that was right only while the
-  framework claimed to deploy processes itself. See
-  `docs/phase-0-environment.md` and `docs/spec-pack.md`.
+- **BPMN definitions are shipped as discovered, not reasoned about — but the
+  engine that runs them is a stated question.** The spec pack carries the
+  `.bpmn` files byte-identically, plus `process/bindings.json` enumerating
+  what every service task, listener, and gateway condition references and
+  which inventory node that resolves to. Making those files run on the
+  replacement's engine is the implementer's work, and the framework has **no**
+  `bpmn_target_engine` framework parameter and no engine-continuity gate: it
+  would have zero consumers, since no step here deploys a process or inspects
+  a target engine. `bpmn_source_engine` is kept because it does have one —
+  `b3` copies it into process-behavior frontmatter as a traceability label,
+  and the pack records it so a reader knows which execution semantics the
+  carried-over files assume.
+
+  What changed after the pilot is that **not choosing is no longer silent.**
+  See "The process engine is a recorded decision" below.
 - Branch-coverage triage (`c5`) is risk-tiered, not a blanket 100% gate.
   `rule`/`process` behaviors and anything flagged `high_risk_override` (money,
   authorization, state transitions) triage every uncovered branch; everything
@@ -144,7 +145,7 @@ pilot can correct them.
   extracting less.** "We don't check whether the rebuild matched" was read
   once as "we needn't state what it should match," which is how the layout
   gap happened; the two are unrelated. The adopting team records what it
-  intends in `ui-conventions.yaml` (`layout_intent`), and nothing verifies
+  intends in `target-conventions.yaml` (`ui.layout_intent`), and nothing verifies
   that either — it is written down so a reviewer knows which differences
   were the plan.
 - IDs are stable and global: `SCR-####`, `SVC-####`, `BHV-####`, etc. All
@@ -227,7 +228,7 @@ exists to close.
 **The REST API contract is the one deliberate exception to "the framework
 describes the legacy app, it does not design the target."** It is derived —
 from service skeletons, the data model, screen pagination facts, and a
-human-authored `templates/api-conventions.yaml` — and emitted as OpenAPI
+human-authored `templates/target-conventions.yaml` — and emitted as OpenAPI
 fragments merged by script into one document.
 
 The exception is earned by a property no other target-side artifact has:
@@ -299,7 +300,7 @@ verdict. Both are fixed: `c7` now records a verdict for `SCR` and `NAV`
 nodes too (an operation, or `client_side_only`, or unmapped), and `c7b`
 binds each scenario to where the target observes it. The page-semantics
 translation policy itself — what an unauthenticated call returns, what a
-navigation outcome becomes — moved into `api-conventions.yaml`, where the
+navigation outcome becomes — moved into `target-conventions.yaml`, where the
 framework's existing rule already puts target-architecture decisions: a
 human-authored input, applied mechanically, never inferred.
 
@@ -330,7 +331,7 @@ is that "found nothing" and "there is nothing to find" read identically to
 whoever opens the pack. The new `AUTHN` node states the absence positively,
 with the realm, the role vocabulary, and the authentication mechanism; the
 gap becomes a stated question with an authored answer in
-`api-conventions.yaml`'s `target_identity`.
+`target-conventions.yaml`'s `identity:` section.
 
 **6. Open questions are a register, not a discovery
 (`triage/open-questions.jsonl`).** The pilot invented its own gap log, its
@@ -426,17 +427,17 @@ What they carry is what the framework deliberately does not extract —
 density, proportion, visual weight — plus the only practical way to catch a
 tree that resolved a dynamic composition wrongly.
 
-**4. `ui-conventions.yaml` — a carried input, and deliberately weaker than
-`api-conventions.yaml`.** Worth stating precisely, because the symmetry is
-tempting and false. `api-conventions.yaml` is an input to a derivation: `c7`
-reads it and refuses to run without it. Nothing reads `ui-conventions.yaml`;
-`c9` copies it into `handover/` and hashes it, and a pack without one passes
-every gate. The reason to ship it anyway is the reason the endpoint contract
-exists — the mapping from a `tabs` container to a target component gets
-decided either way, and decided per-screen by whoever arrives first it
-produces three different ideas of a form section. The difference is that here
-the framework can record the decision and cannot apply it, because applying
-it is implementation.
+**4. A `ui:` section in `target-conventions.yaml` — recorded, not required.**
+Worth stating precisely, because the symmetry with the API conventions is
+tempting and false. The `api:` and `identity:` sections are inputs to a
+derivation: `c7` reads them and refuses to run without them. Nothing reads
+`ui:`; `c9` copies the file into `handover/` and hashes it, and a pack whose
+`ui:` section is empty passes every gate. The reason to ship it anyway is the
+reason the endpoint contract exists — the mapping from a `tabs` container to
+a target component gets decided either way, and decided per-screen by whoever
+arrives first it produces three different ideas of a form section. The
+difference is that here the framework can record the decision and cannot
+apply it, because applying it is implementation.
 
 **What was considered and rejected: shipping HTML + CSS.** The obvious fix is
 to translate each `.xhtml` into plain HTML and CSS and let the implementer
@@ -463,6 +464,79 @@ observation would give the pack two copies of one fact and nothing to say
 which is authoritative. The cost is real: a statically-resolved tree can be
 wrong about a dynamic composition, and catching that is a review activity
 against the captured screenshots, not a validator.
+
+## Settled: the process engine is a recorded decision, and one file holds them all (2026-08-08)
+
+Two changes with one shape, both prompted by the same observation: the pilot's
+implementing agent **deleted the process engine.** It reimplemented the
+orchestration by hand, which left the `.bpmn` files the pack ships
+byte-identically as decoration, and the gateway conditions `a3`/`a6` lifted
+into `RULE` nodes to be rediscovered one at a time.
+
+This is the layout failure again, and it is worth naming the pattern rather
+than the instance: **where the pack is silent, the implementer decides, and
+the decision leaves no trace.** Layout, the identity model, the endpoint
+shape, and now the process engine are four instances. The framework's answer
+each time is the same and is not "decide it for them" — it is *ask the
+question, in a place with room for the answer.*
+
+**The engine choice is asked, not made.** Every active `PROC` node seeds a
+`blocks: true` open question. It blocks because a process behavior genuinely
+cannot be built without the answer, which distinguishes it from most register
+entries. The answer goes in `target-conventions.yaml`'s `process:` section:
+`target_engine`, and `bpmn_disposition` (`run-as-shipped` / `port` /
+`reimplement`).
+
+`target_engine: none` is a legitimate answer. For two sequential user tasks
+and a gateway, an engine is overhead, and the framework has no business
+insisting otherwise. What it does insist is that `none` be *chosen* — at which
+point `process/bindings.json` stops being a rewiring list and becomes the
+enumeration of everything the team must now write and test itself, which is
+exactly the visibility the pilot lacked.
+
+**The framework does recommend a default, and that is consistent with its
+scope rather than an exception to it.** `framework.yaml` already recommends
+`legacy_test_seam: service` while requiring per-application confirmation at
+the Phase 0 gate; `process.target_engine` uses the identical posture. The
+recommendation for a Camunda 7 legacy application is an embedded
+Camunda-7-compatible engine, because it is the only choice under which the
+pack's own byte-identical `.bpmn` premise stays true. The reasoning, the
+alternatives, and the support-lifecycle facts that drive it are in the
+template's comments, where they can be re-checked — engine lifecycles date
+faster than anything else in this repository, and a recommendation whose basis
+is not written down cannot be re-evaluated when it goes stale.
+
+**One conventions file.** `api-conventions.yaml` and `ui-conventions.yaml`
+merge into `templates/target-conventions.yaml`, with the process decision as a
+third section and identity as a fourth. Three files was already sprawl and a
+fourth would have been worse; more usefully, the required/recorded distinction
+is now carried by section comments rather than by which file something lives
+in, which is where it belongs:
+
+| Section | Status | Consumer |
+|---|---|---|
+| `api:` | required — `c7` refuses without it | `c7`, `c7b` |
+| `identity:` | required — same | `c7`, `c7b` |
+| `process:` | recorded | nothing |
+| `ui:` | recorded | nothing |
+
+`c9` records per-section whether each was authored
+(`conventions_sections_recorded`), so an empty `process:` section is a stated
+fact rather than an absence — the same `null`-versus-absent discipline the
+value facts already use.
+
+**One security gap closed with it.** `identity:` gains `enforcement_point` and
+`url_constraint_policy`. The pack said which roles each operation requires and
+never said what *enforces* that, nor what becomes of a `web.xml`
+`<security-constraint>` whose `<url-pattern>` protected a server-rendered page
+the target no longer has. Both were being decided per behavior. A `web.xml`
+`AUTHZ` constraint with no operation for its roles to land on now seeds a
+register entry.
+
+No security *product* is recommended, and that asymmetry with the engine
+recommendation is deliberate: variance across identity stacks is far higher,
+and no artifact in the pack becomes invalid depending on the choice, which is
+precisely what earns the engine its recommendation.
 
 ## Settled: explicitly out of scope
 
@@ -502,7 +576,7 @@ a pilot and correct here.
 | 3 | Node ID prefixes beyond the three given (`SCR`, `SVC`, `BHV`) | Added `RULE`, `PROC`, `TASK`, `JOB`, `NAV`, `DB`, `EL`, `CFG`, `AUTHZ`, `AUTHN`, `TPL` — see `docs/phase-a-inventory.md` | inventory schema |
 | 4 | Default `combinatorial_reducer` | `pict` (freely available, Microsoft-licensed, wide precedent) over `acts` | `framework.yaml` |
 | 5 | Default `spec_format` | `gherkin` — more legible to non-engineers reviewing behavior specs during triage; `junit` and `both` remain first-class options. **`framework.yaml` corrected 2026-08-07** to actually default to `gherkin`; it previously defaulted to `both`, contradicting this row | `framework.yaml` |
-| 6 | Default `bpmn_source_engine`/`bpmn_target_engine` | Both left as `camunda7` placeholders. Engine continuity is a checked Phase 0 precondition, and stays one even with implementation out of scope: the spec pack ships the `.bpmn` files byte-identically, which is only a valid deliverable if the target engine can execute them | `framework.yaml`, `docs/phase-0-environment.md`, `docs/spec-pack.md` |
+| 6 | Default `bpmn_source_engine` | Left as a `camunda7` placeholder. **This row previously also named a `bpmn_target_engine` and called engine continuity "a checked Phase 0 precondition" — contradicting the settled bullet above, which deleted that parameter when implementation left scope.** The contradiction is resolved in favour of the bullet: there is no target-engine parameter and no continuity gate. The target engine is recorded in `target-conventions.yaml`'s `process:` section and asked as a blocking open question, neither of which is a `framework.yaml` parameter | `framework.yaml`, `templates/target-conventions.yaml`, `docs/spec-pack.md` |
 | 7 | How "identifying reusable rule behaviors" gets mechanically pre-reduced | Clone/AST-similarity detection (`b1-detect-rule-similarity-candidates`, a script step) proposes candidate clusters of 2–5 items; a bounded step confirms each candidate in isolation. No step ever asks a model to scan the whole codebase for duplication. | `steps/b1-*.yaml`, `steps/b2-*.yaml` |
 | 8 | Rolling window for the escalation-rate metric | Last 20 calls to a given step | `docs/metrics.md` |
 | 9 | Whether Phase 0 needs step contracts like A/B/C | No — Phase 0 is a one-time entry gate checklist, not a repeatable pipeline step, so it has a doc but no `steps/*.yaml` | `docs/phase-0-environment.md` |

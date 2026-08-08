@@ -14,7 +14,7 @@ input:
   source: >
     one BHV-####.md's scenarios + that behavior's covered nodes + the c7/c8
     operations whose source_node_id is among them + c7's client_side_only
-    verdicts + api-conventions.yaml's auth_semantics and
+    verdicts + target-conventions.yaml's auth_semantics and
     navigation_semantics
   fields: [bhv_id, scenarios, covered_nodes, candidate_operations,
     client_side_only, translation_policy]
@@ -29,7 +29,7 @@ validators:
     non-empty rationale
   - no binding invents a status code, path, or response shape — any such
     detail is copied from the named operation's fragment or from
-    api_conventions.auth_semantics
+    target_conventions.identity.auth_semantics
 escalate:
   trigger: 3 consecutive schema-validation failures, OR a scenario bound
     "not-observable" with confidence below 0.5
