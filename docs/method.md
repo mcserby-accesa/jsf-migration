@@ -80,8 +80,7 @@ The output is the **spec pack**: one directory describing the legacy
 application completely enough to rebuild it without opening the legacy
 source. Building the replacement is *not* part of this framework — see
 `DECISIONS.md`, "explicitly out of scope." Phase D validates the pack against
-the legacy app; it does not touch the new one. Its step contracts are
-designed but not yet authored.
+the legacy app; it does not touch the new one.
 
 ### Phase 0 — Environment (entry gate)
 
@@ -220,11 +219,28 @@ observe it, once, against the derived contract.
 ### Phase D — Spec validation
 
 Phase C's coverage oracle runs at the `service` seam, so it never renders a
-page. That means every EL expression lifted in Phase A, and every navigation
-rule, is specified and then executed by nothing. Phase D closes that: derived
-tests driven through a browser against the legacy application, checking the
-specs against what the app actually does. Designed, not yet authored — see
-`DECISIONS.md`.
+page. That means every EL expression lifted in Phase A, every navigation rule,
+and every `render_guard` on a layout tree is specified and then executed by
+nothing. Those are the framework's headline claims, and until Phase D they were
+claims no step checked.
+
+Phase D closes it. `playwright` is a third format `c3` renders from the same
+canonical behavior document — so browser cases cannot hand-drift from the spec
+any more than JUnit can — and `d1` drives them through a browser against the
+*legacy* application. The report is rule-level: for every lifted `RULE`,
+`validated`, `contradicted`, `not_exercised`, or `out_of_scope`.
+
+**A failure means the spec is wrong.** `c4` failing says the tests do not match
+the code; `d1` failing says the lift misread the rule, and the fix is in the
+lift. What the framework does not render is fixtures — putting the app into the
+state a case needs is a named hook the adopting team implements, exactly as it
+implements Gherkin step definitions.
+
+How much to validate is `spec_validation_scope`, and `none` is a legitimate
+answer: whether it is worth the investment is your call. What the pack records
+either way is how many lifted rules went unchecked, because "we chose not to"
+and "there was nothing to check" must not read the same. See
+`docs/phase-d-spec-validation.md`.
 
 ## What "done" means for a behavior
 

@@ -29,6 +29,19 @@
       }
     },
     "behavior_count": { "type": "integer", "minimum": 0 },
+    "spec_validation": {
+      "type": "object",
+      "required": ["scope", "rules_total", "validated", "not_exercised", "out_of_scope"],
+      "additionalProperties": false,
+      "description": "Carried from d1's report (schemas/d1-run-spec-validation.schema.json). Present in the manifest so that how much of the spec was actually checked against the running legacy application is readable from the pack itself, not only from whoever set framework.yaml. contradicted is absent by construction: a contradicted rule fails the gate, so a shipped pack has none.",
+      "properties": {
+        "scope": { "type": "string", "enum": ["none", "view_and_high_risk", "full"] },
+        "rules_total": { "type": "integer", "minimum": 0, "description": "Every active lifted RULE in the pack. The denominator — out_of_scope against this is the number that says how much of the framework's central claim went unchecked." },
+        "validated": { "type": "integer", "minimum": 0 },
+        "not_exercised": { "type": "integer", "minimum": 0 },
+        "out_of_scope": { "type": "integer", "minimum": 0 }
+      }
+    },
     "open_questions_seeded": {
       "type": "integer",
       "minimum": 0,
@@ -89,6 +102,7 @@
               "step_index_complete",
               "scenario_surface_bound",
               "value_facts_complete",
+              "spec_validation_recorded",
               "layout_tree_complete",
               "wireframe_renders_for_every_screen",
               "screen_reference_captured",

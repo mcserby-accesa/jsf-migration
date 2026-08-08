@@ -9,7 +9,8 @@ description: >
   behaviors/scenario-bindings.json, data/fixture-order.json and
   auth/identity.json, render views/wireframes/ from views/pages.json, copy
   a8's captured screen references and their index, carry
-  handover/target-conventions.yaml, seed
+  handover/target-conventions.yaml, copy d1's validation report to
+  validation/rule-outcomes.jsonl, seed
   triage/open-questions.jsonl and an empty behaviors/progress.jsonl, write
   manifest.json and the generated README index, then run the
   spec_pack_complete gate. This is the framework's terminal step — its
@@ -20,7 +21,8 @@ input:
     nodes.jsonl, edges.jsonl, every BHV-####.md that passed c6, c3's rendered
     tests, c3b's verification reports, the application triage log, c7/c8's
     operation fragments and client_side_only verdicts, c7b's scenario
-    bindings, a8's capture report and the captured images, the legacy
+    bindings, a8's capture report and the captured images, d1's spec
+    validation report, the legacy
     repository's .bpmn files, framework.yaml, target-conventions.yaml
   bound: not applicable (deterministic script over the whole application)
 output_schema: schemas/c9-assemble-spec-pack.schema.json
@@ -38,6 +40,7 @@ validators:
   - step_index_complete
   - scenario_surface_bound
   - value_facts_complete
+  - spec_validation_recorded
   - layout_tree_complete
   - wireframe_renders_for_every_screen
   - screen_reference_captured
@@ -147,6 +150,13 @@ open_questions_seeding:
       answer (process.target_engine: none) — arriving at it by deletion, with
       nothing recorded, is not. It blocks because a process behavior cannot
       be built without the answer.
+    - Every lifted RULE whose d1 outcome is out_of_scope or not_exercised
+      seeds an unvalidated_lifted_rule entry. Not blocking: a pack ships
+      unvalidated by design when spec_validation_scope is none, and the entry
+      exists so that choice is visible to whoever opens the pack rather than
+      only to whoever set the parameter. A contradicted outcome seeds nothing
+      — it fails the gate, because the pack would otherwise state a falsehood
+      about the legacy application.
     - Every AUTHZ node with constraint_type web.xml seeds an
       unenforced_url_constraint entry when identity.url_constraint_policy is
       `drop`, or when the screens under its url_pattern produced no

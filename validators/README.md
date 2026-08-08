@@ -57,6 +57,8 @@ file is the authority on *when it runs*.
 - **Checks:** every active `SCR` node's `raw_facts` includes `form_fields`,
   `field_groups`, `data_tables`, `ajax_bindings`, `converters_validators`,
   `labels`, and `messages` (each may be an empty list, but must be present);
+  every `form_fields` entry carries `client_id`, `label_position` and
+  `width_class` as keys (`client_id` may be `null`);
   every active `SVC` node's `public_methods` entries include `params`,
   `return_type`, `action_bound`, and `nav_outcomes`. Value facts on those
   same nodes are checked separately by `value_facts_complete`, and layout
@@ -345,6 +347,46 @@ file is the authority on *when it runs*.
   What it prevents is a scenario reaching an implementer with no decision
   recorded either way.
 
+## `spec_validation_recorded`
+
+- **Applies to:** `d1-run-spec-validation` output, checked by `d1` and
+  re-checked over the assembled pack by `c9`.
+- **Reads:** `d1`'s report, `nodes.jsonl` (every active lifted `RULE` and its
+  `DERIVED_FROM` edge), the behaviors that passed `c6`, and
+  `framework.yaml: spec_validation_scope`.
+- **Checks:**
+  1. Every active lifted `RULE` has **exactly one** outcome — including rules
+     excluded by scope, which are reported `out_of_scope`, not omitted.
+  2. Every `rule_id` resolves to an active `RULE` with a `DERIVED_FROM` edge;
+     every `scenario_id` in `cases` resolves to a scenario or decision-table
+     row in the owning behavior.
+  3. The report's `scope` equals `framework.yaml`'s, so a report cannot read as
+     more thorough than the run that produced it.
+  4. Every behavior the scope selects was actually attempted.
+  5. Every `not_exercised` and every `out_of_scope` outcome states a `reason`.
+  6. `counts` are consistent with `outcomes`, and `rules_total` is the whole
+     population of lifted rules rather than the in-scope subset.
+  7. **Zero outcomes are `contradicted`.** This is the exit gate.
+- **Output:** `{ "passed": bool, "failures": ["<RULE id or check>: <detail>"] }`.
+- **On failure:** a `contradicted` rule blocks Phase C sign-off for its owning
+  behavior. It is **not** waivable and not a retry: the legacy application
+  disagreed with the spec, so the lift is wrong, and the correction is made in
+  `a3-lift-rule`'s output before `c1`/`c2`/`c3` re-derive. Shipping a pack
+  containing a contradicted rule would ship a stated falsehood about the
+  legacy system.
+- **What passing does not mean:** that the spec was validated. A pack with
+  `spec_validation_scope: none` passes this check with every rule
+  `out_of_scope`, and should — the choice is the adopting team's. What the
+  check prevents is the choice being invisible: `rules_total` versus
+  `out_of_scope` is the number that says how much of the framework's central
+  claim went unchecked, and it is only legible because `rules_total` counts
+  the whole population.
+- **Why `not_exercised` does not fail:** it is a finding about the seeded data
+  or the extraction, not about the application, and failing on it would push a
+  team toward deleting the case rather than fixing the fixture set. Phase 0
+  already draws that distinction: "unreachable given this data" and
+  "unreachable given any data" are different claims.
+
 ## `open_questions_well_formed`
 
 - **Applies to:** `triage/open-questions.jsonl`, checked by `c9`.
@@ -356,7 +398,7 @@ file is the authority on *when it runs*.
   lift with `open_value_domain`, an external `credential_store`, a
   `not-observable` binding, a `c8`-judged endpoint, an active `PROC` node with
   no chosen target engine, a `web.xml` `AUTHZ` constraint with nowhere to
-  land).
+  land, a lifted `RULE` that Phase D left unvalidated).
 - **Output:** `{ "passed": bool, "failures": ["<OQ id or source>: <detail>"] }`.
 - **On failure:** blocks pack handover.
 - **Not checked:** whether any question is answered. A pack ships with open
@@ -511,7 +553,8 @@ file is the authority on *when it runs*.
   and `identity:` sections complete, and `conventions_sections_recorded`
   states for each of `process:` and `ui:` whether it was authored — those two
   are optional (nothing derives from them) and the gate checks only that the
-  manifest says which.
+  manifest says which; and (7) `validation/rule-outcomes.jsonl` accounts for
+  every lifted rule, with the manifest's `spec_validation` counts matching it.
 - **Output:** `{ "passed": bool, "failures": ["<check>: <detail>"] }`.
 - **On failure:** the pack is not handed over. See `docs/spec-pack.md`,
   "Completeness gate" — a partial pack presented as a complete one is the one

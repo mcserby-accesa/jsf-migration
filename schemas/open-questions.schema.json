@@ -14,7 +14,7 @@
     },
     "raised_by": {
       "type": "string",
-      "description": "The step whose output seeded this entry (a1, a3, c7, c7b, c8, c9), or 'implementer' for one appended after handover."
+      "description": "The step whose output seeded this entry (a1, a3, c7, c7b, c8, c9, d1), or 'implementer' for one appended after handover."
     },
     "subject": {
       "type": "array",
@@ -32,6 +32,7 @@
         "external_credential_store",
         "unenforced_url_constraint",
         "undecided_process_engine",
+        "unvalidated_lifted_rule",
         "absent_persistence_target",
         "judged_endpoint",
         "other"

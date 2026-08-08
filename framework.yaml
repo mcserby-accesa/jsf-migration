@@ -7,15 +7,27 @@
 # mechanism. If you find a second place in the codebase reading one of
 # these values, that is a bug in the implementation, not a new feature.
 
-# Output format(s) for rendered executable specs.
-#   gherkin | junit | both
+# Output format(s) for rendered executable specs. A LIST — one or more of:
+#   gherkin | junit | playwright
 # Consumed ONLY by steps/c3-render-tests.yaml. Nothing upstream of rendering
 # (inventory, behavior specs, acceptance criteria, decision tables) knows or
 # cares about this value. Changing it produces different files in
 # examples/-shaped output directories; it never changes a BHV-####.md.
-# Default is gherkin per DECISIONS.md #5 (more legible to non-engineers
-# reviewing behavior specs during triage); junit/both remain first-class.
-spec_format: gherkin
+#
+# Default is [gherkin] per DECISIONS.md #5 (more legible to non-engineers
+# reviewing behavior specs during triage); junit is equally first-class.
+#
+# `playwright` renders browser cases that Phase D runs against the LEGACY
+# application (templates/renderers/playwright.md). Include it only if
+# spec_validation_scope below is not `none` — rendering browser specs nothing
+# runs produces files that rot. c3 warns on that combination rather than
+# failing, since rendering them to read is a legitimate if unusual choice.
+#
+# This was a scalar with a `both` value until Phase D was authored. `both`
+# stopped being meaningful with a third format, and enumerating pairs
+# (gherkin_and_junit, ...) would grow quadratically. A list says the same
+# thing without the combinatorics.
+spec_format: [gherkin]
 
 # The BPMN engine the LEGACY application runs.
 #   e.g. camunda7 | camunda8 | flowable | jbpm | none
@@ -58,11 +70,35 @@ legacy_test_seam: service
 # "Phase D is spec validation, not implementation"). Phase D's browser-driven
 # validation runs against the *legacy* app, a fixed seam rather than a choice.
 #
-# Phase D will need one parameter, spec_validation_scope, when its steps are
-# authored. It is specified in DECISIONS.md and NOT declared here yet: every
-# parameter in this file has a real, authored consumer today, and that one
-# doesn't. Adding config for a step that doesn't exist is the premature
-# completeness this framework otherwise avoids.
+# How much of the spec Phase D validates against the running legacy app.
+#   none | view_and_high_risk | full
+# Consumed ONLY by steps/d1-run-spec-validation.yaml. Declared here now that
+# that step exists — it was deliberately withheld while Phase D was designed
+# but not authored, because every parameter in this file has a real consumer.
+#
+#   none                Nothing runs. A legitimate choice: whether validating
+#                       the spec is worth the investment is your call, and the
+#                       framework has no standing to insist. It is NOT silent —
+#                       d1 still emits an out_of_scope outcome per lifted rule,
+#                       c9 records the counts in the manifest, and each
+#                       unvalidated rule seeds an open-questions entry. Same
+#                       discipline as not_sampled in the triage log.
+#   view_and_high_risk  DEFAULT. Every behavior covering a RULE derived from an
+#                       EL or NAV node, plus anything high_risk_override: true.
+#                       Those are exactly the behaviors whose evidence c4
+#                       structurally cannot produce: at legacy_test_seam:
+#                       service no page is rendered, so every EL-derived rule
+#                       and every render_guard on a layout tree is turned into
+#                       a test and then executed by nothing.
+#   full                Every behavior. Buys a second look at scenarios that
+#                       already have coverage-backed evidence, at the cost
+#                       docs/phase-0-environment.md warns about for the ui
+#                       seam — driving JSF ViewState and partial-ajax through
+#                       a browser is where the effort goes.
+#
+# Record the choice and its reason in the Phase 0 checklist, beside
+# legacy_test_seam. See docs/phase-d-spec-validation.md.
+spec_validation_scope: view_and_high_risk
 
 # Where nodes.jsonl / edges.jsonl get loaded for querying.
 #   duckdb | sqlite

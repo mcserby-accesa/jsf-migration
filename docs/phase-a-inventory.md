@@ -127,9 +127,10 @@ so they need graph *edges* for traceability, not an EL-style lift.
   optional detail.
 - `EL`: `attribute` (`rendered`/`disabled`/`required`/`value`/other),
   `raw_expression` (verbatim EL string), `attached_component_id`,
-  `attached_screen` (the `SCR` id — or the `TPL` id, for an expression in a
-  template or composite component, which is where the shell's own
-  role-conditional logic lives).
+  `client_id` (the rendered id of `attached_component_id`, or `null` — see
+  rule 2 below), and `attached_screen` (the `SCR` id — or the `TPL` id, for an
+  expression in a template or composite component, which is where the shell's
+  own role-conditional logic lives).
 - `CFG`: `declaration_type`, `scope` (request/session/application/view),
   `raw_xml_excerpt`.
 - `AUTHZ`: `constraint_type` (`web.xml`/`annotation`), `url_pattern` (if
@@ -250,6 +251,21 @@ not how to implement it.
    step's bounded, single-judgment shape for a question it wasn't scoped to
    answer. An unmapped widget is a known gap flagged for a human, not a
    guess an LLM should be asked to make.
+
+   Every `form_fields` entry also carries `client_id`: the id the component
+   actually renders with, which for a JSF component is its own id prefixed by
+   its `NamingContainer` chain (`leaveForm:startDate`). The extractor computes
+   it from the chain the same DOM walk already knows, and records `null` when
+   the view builds ids dynamically or the chain is not statically resolvable —
+   `null` and absent distinguished as everywhere else. `EL` nodes carry it too,
+   beside `attached_component_id`.
+
+   This exists because a browser cannot locate an element from a bare
+   component id. Phase D's rendered cases target `client_id` where it is known
+   and fall back to a suffix match where it is `null`
+   (`templates/renderers/playwright.md`), and a fallback locator is ambiguous
+   when two containers hold the same id — so which one a case used has to be
+   visible in the generated file.
 
    Every `form_fields` and `data_tables` column entry additionally carries
    two placement facts, read from the source's own declarations:

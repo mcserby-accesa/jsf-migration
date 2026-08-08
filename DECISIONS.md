@@ -184,17 +184,20 @@ executed by nothing. Those lifts are currently claims no step checks. A
 browser-driven run is the only thing that can check them, which is what makes
 this a distinct phase rather than just `legacy_test_seam: ui`.
 
-**Enforcement scope — designed here, not yet authored:**
-`spec_validation_scope: none | view_and_high_risk | full`, default
-`view_and_high_risk`. Mandatory for behaviors covering a `RULE` derived from
-an `EL` or `NAV` node (exactly the ones `c4` structurally cannot reach) plus
-anything `high_risk_override: true`; everything else is skipped and recorded
-as skipped, the same bookkeeping discipline as `not_sampled` in the triage
-log. A blanket "validate everything" gate on a real application's behavior
-count is the unachievable-gate failure this file already rejected for `c5`;
-a "validate nothing" default would leave the framework's central claim
-unverified. Not declared in `framework.yaml` until the steps exist, per that
-file's one-parameter-one-consumer rule.
+**Enforcement scope:** `spec_validation_scope: none | view_and_high_risk |
+full`, default `view_and_high_risk`. Mandatory for behaviors covering a `RULE`
+derived from an `EL` or `NAV` node (exactly the ones `c4` structurally cannot
+reach) plus anything `high_risk_override: true`; everything else is skipped and
+recorded as skipped, the same bookkeeping discipline as `not_sampled` in the
+triage log. A blanket "validate everything" gate on a real application's
+behavior count is the unachievable-gate failure this file already rejected for
+`c5`; a "validate nothing" default would leave the framework's central claim
+unverified.
+
+**Authored 2026-08-08.** This paragraph read "designed here, not yet authored"
+and the parameter was withheld from `framework.yaml` under the
+one-parameter-one-consumer rule. Both are resolved — see "Phase D is authored"
+below.
 
 **What the reversal deletes:** the `d0`–`d6` step sketches; `target_test_seam`;
 `layout_fidelity` / `service_boundary_fidelity` and the structural-diff
@@ -584,6 +587,80 @@ of source it came from — which matters, because an `el`-derived rule has no
 as inventory node ids, for the same reason: an id that reappears meaning
 something else silently invalidates every external reference to the first
 thing.
+
+## Settled: Phase D is authored (2026-08-08)
+
+Phase D existed as forty lines of settled decision and no contracts: no
+`docs/phase-d-*.md`, no `steps/d*.yaml`, no schema, and `spec_validation_scope`
+withheld from `framework.yaml` because nothing consumed it. Meanwhile it was
+the only thing that would ever check the framework's **headline claim** — that
+EL logic invisible to JaCoCo is captured — since at `legacy_test_seam:
+service` every EL-derived rule is extracted, lifted, turned into acceptance
+criteria, rendered into a test, and then executed by nothing. The layout work
+made that hole bigger: a `render_guard` on a container is EL-derived too, and
+`layout_tree_complete` checks only that it resolves to a real rule.
+
+**It is a renderer plus a run, not a phase of new steps.** This is the finding
+that made authoring cheap, and it follows from principle 3: acceptance criteria
+are authored once and *rendered* outward, so hand-writing browser tests from
+the pack would breach the one-spec-rendered-outward rule exactly as
+hand-translating Gherkin into JUnit would. So `playwright` becomes a third
+`spec_format` rendered by the existing `c3`, verified by the existing `c3b`,
+and `d1-run-spec-validation` runs it. The deleted `d0`–`d6` sketch assumed a
+whole phase; it needed two files.
+
+What made a *derived* browser test possible is that the pack now carries what
+one needs, and half of it only since the layout work: `SCR.view_path` and
+`nav_menu[].target_view` say which page; `form_fields[].client_id` says how to
+locate an element; a `RULE`'s `DERIVED_FROM` edge to its `EL` says which
+element the rule governs; and `c2`/`c2b`'s decision table already says which
+condition combinations to exercise. The renderer joins four things that exist
+and invents none.
+
+`client_id` is the one extraction addition — the rendered id of a component,
+its own id prefixed by its `NamingContainer` chain. A browser cannot locate an
+element from a bare JSF component id, so without it nothing here works. It is
+`null` where the chain is not statically resolvable, with the renderer falling
+back to a suffix match and saying so in the generated file, because a fallback
+locator is ambiguous when two containers share an id.
+
+**What the framework still does not do: fixtures.** A case asserting "the panel
+is hidden when status is APPROVED" must put the application in that state, and
+the framework has no authority to write SQL against your seeded database. The
+renderer emits a call to a named setup hook per scenario, which the adopting
+team implements — the same relationship `c3`'s Gherkin already has with its
+step definitions. That is the honest division: the navigation and the
+assertions are derivable, the state setup is not.
+
+**A failure here means the spec is wrong.** This inverts the normal reading of
+a red test and is the phase's defining property. `c4` failing says the tests do
+not match the code; `d1` failing says the *lift* misread the rule. So a
+`contradicted` outcome is not waivable and not a retry — it routes to human
+review of `a3-lift-rule`'s output, and the correction is made in the lift.
+Shipping a pack containing one would ship a stated falsehood about the legacy
+system.
+
+**The report is rule-level, not scenario-level.** `c4` reports branch coverage;
+`d1` reports, for every lifted `RULE`, one of `validated` / `contradicted` /
+`not_exercised` / `out_of_scope`. "94% of scenarios passed" says nothing about
+whether this behavior's twelve EL lifts were among them. `not_exercised` earns
+its own outcome for the reason Phase 0 already gives about seed data:
+"unreachable given this data" and "unreachable given any data" are different
+claims, and only the second is about the application.
+
+**`none` is legitimate; silent `none` is not.** Whether validating the spec is
+worth the investment is the adopting team's call and the framework has no
+standing to insist. So `d1` still emits an `out_of_scope` outcome per rule,
+`c9` records the counts in `manifest.json`,
+`validation/rule-outcomes.jsonl` ships as a pack original, and each
+unvalidated rule seeds an `unvalidated_lifted_rule` register entry.
+`rules_total` against `out_of_scope` is the number that says how much of the
+central claim went unchecked, and it is legible only because `rules_total`
+counts the whole population rather than the in-scope subset.
+
+That is the same pattern as every other change since the pilot — layout, the
+process engine, the identity model, the enforcement point. Each was a decision
+made by silence. This was the last one, and it was the framework's own.
 
 ## Settled: explicitly out of scope
 

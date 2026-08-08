@@ -105,6 +105,9 @@ spec-pack/
   triage/
     triage-log.jsonl             every uncovered branch's verdict     [original]
     open-questions.jsonl         every unanswered spec question       [original, append-only]
+
+  validation/
+    rule-outcomes.jsonl          did the legacy app agree with each lift  [original]
 ```
 
 ## What each part is
@@ -257,6 +260,27 @@ that rationalized away its own gaps.
 
 **`triage/open-questions.jsonl`** — See "The open-questions register" below.
 
+**`validation/rule-outcomes.jsonl`** — For every lifted `RULE` in the pack,
+whether Phase D drove the legacy application through a browser and found that
+it actually behaves as the lift says: `validated`, `contradicted`,
+`not_exercised`, or `out_of_scope`.
+
+This is the only file in the pack that says any part of the spec is *true*
+rather than complete. Everything else here proves coverage; a lifted EL rule
+has no coverage path at all — at `legacy_test_seam: service` no page is
+rendered, so the rule is extracted, lifted, turned into acceptance criteria,
+rendered into a test, and executed by nothing. This file is where that stops
+being invisible.
+
+A pack may legitimately ship with every outcome `out_of_scope`
+(`spec_validation_scope: none`) — validating the spec is an investment
+decision the framework does not make. What it may not do is ship without the
+file, because `rules_total` against `out_of_scope` is the number that says how
+much of the framework's central claim went unchecked. A `contradicted` outcome
+cannot ship at all: it means the legacy application disagreed with the spec,
+and the pack would be stating a falsehood. See
+`docs/phase-d-spec-validation.md`.
+
 ## The API contract
 
 This is the only derived design in the pack, and it earns its place for a
@@ -353,6 +377,7 @@ The pipeline seeds it at assembly from states its own steps already record:
 | An `AUTHN` node with `credential_store: external` | the credentials are not in this repository, and something must replace them |
 | A `web.xml` `AUTHZ` constraint with no operation to land on | this URL pattern protected a page the target does not have |
 | An active `PROC` node with no chosen target engine | **blocking** — the pack ships these `.bpmn` files to be run, and nothing says what runs them |
+| A lifted `RULE` Phase D left unvalidated | this rule is a claim no step in the pipeline checked |
 | A scenario bound `not-observable`, or `preserves_legacy_meaning: false` | this assertion has no target equivalent, or has an adapted one |
 | A `c8` resolution — an endpoint decided by judgment rather than by rule | this part of the contract was a call, not a derivation |
 | A `dead_code` verdict overturned in Step 5b review | the pipeline classified this wrongly once |
@@ -486,7 +511,8 @@ The pack is not handed over until every one of these passes:
 | `identity_model_present` | does the pack state exactly one identity model |
 | `open_questions_well_formed` | is every seeded question resolvable, with its subjects present |
 | `dependency_order_derivable` | does the build order follow from real edges, with cycles reported |
-| `spec_pack_complete` | did every behavior pass `c6`; does every id resolve within the pack; does the manifest match what is on disk; and is `handover/target-conventions.yaml` present with its required sections and its recorded sections accounted for |
+| `spec_validation_recorded` | does every lifted rule have an outcome, and did none of them contradict the legacy application |
+| `spec_pack_complete` | did every behavior pass `c6`; does every id resolve within the pack; does the manifest match what is on disk; is `handover/target-conventions.yaml` present with its required sections and its recorded sections accounted for; and do the manifest's `spec_validation` counts match `validation/rule-outcomes.jsonl` |
 
 **`validators/README.md` is the authority on what each check means** — what it
 reads, exactly what it asserts, and what to do when it fails. This table is a
@@ -494,17 +520,20 @@ pointer, deliberately: an earlier version restated all of it in prose, and the
 prose drifted from the contracts it was restating. The pack's own rule is one
 fact in one place; it applies to this repository's documentation too.
 
-Two things the gate deliberately does **not** require. Open questions do not
+Three things the gate deliberately does **not** require. Open questions do not
 have to be *answered* — a pack ships with them by design, and what the gate
-prevents is shipping one nobody wrote down. And a `process:` or `ui:` section
-of `target-conventions.yaml` may be empty; the gate requires only that the
+prevents is shipping one nobody wrote down. A `process:` or `ui:` section of
+`target-conventions.yaml` may be empty; the gate requires only that the
 manifest records which, so "nobody decided what runs these processes" is a
-statement rather than a silence.
+statement rather than a silence. And the spec does not have to have been
+*validated*: a pack may ship with every rule `out_of_scope`. What it may not do
+is ship without saying so, or ship a rule the legacy application contradicted.
 
 The steps that produce and check all this: `a8` (screen reference capture),
 `c3b` (rendered-artifact verification), `c7` (endpoint derivation), `c7b`
-(scenario surface binding), `c8` (resolve what the rules couldn't map), and
-`c9` (assemble, render wireframes, seed the register, gate).
+(scenario surface binding), `c8` (resolve what the rules couldn't map), `d1`
+(spec validation against the running legacy app), and `c9` (assemble, render
+wireframes, seed the register, gate).
 
 A pack failing any of these is incomplete, not "mostly done." The value of
 the whole method rests on the claim that this description is complete; a

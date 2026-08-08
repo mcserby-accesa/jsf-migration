@@ -2,11 +2,17 @@ id: c3-render-tests
 phase: C
 kind: script
 description: >
-  Deterministically render one behavior's ACs and decision tables into
-  framework.yaml:spec_format (gherkin | junit | both), per the mapping
-  rules in templates/renderers/gherkin.md and templates/renderers/junit.md.
-  Never an LLM call — this is the mechanism that guarantees rendered
-  formats can never hand-drift from the canonical BHV or from each other.
+  Deterministically render one behavior's ACs and decision tables into every
+  format in framework.yaml:spec_format (a list: gherkin | junit | playwright),
+  per the mapping rules in templates/renderers/*.md. Never an LLM call — this
+  is the mechanism that guarantees rendered formats can never hand-drift from
+  the canonical BHV or from each other.
+
+  playwright renders browser cases Phase D runs against the LEGACY application
+  (templates/renderers/playwright.md, docs/phase-d-spec-validation.md). It is
+  the same discipline applied one seam further out: hand-writing browser tests
+  from the pack would breach principle 3 exactly as hand-translating Gherkin
+  into JUnit would.
 input:
   type: single_behavior
   source: one BHV-####.md, fully authored through c1/c2/c2b
@@ -25,8 +31,18 @@ validators:
     (a row with a non-empty decision_table_ref used to be
     ambiguous between "rendered on its own" and "rendered via its table,"
     and the renderers resolved it inconsistently by hand)
-  - if spec_format is "both", gherkin and junit outputs reference the same
-    set of source AC ids
+  - when spec_format lists more than one format, every rendered format
+    references the same set of source AC ids, with one stated exception —
+    playwright omits scenarios whose scenario-bindings verdict is domain-only
+    or not-observable, and records each omission with its reason. A browser
+    case asserting something no browser can observe would report green and add
+    to the count, which is worse than an absent one
+  - every playwright locator is derived per templates/renderers/playwright.md's
+    ordered rule — an exact client_id where one exists, else a suffix match
+    carrying its fallback comment; never a text or positional locator
+  - warn (do not fail) when spec_format includes playwright while
+    spec_validation_scope is none, since those files would be rendered and
+    then run by nothing
   - every emitted step, title, and Examples/@CsvSource cell passes text
     normalization (templates/renderers/gherkin.md, "Text normalization") —
     Markdown emphasis stripped, newlines collapsed, delimiters escaped

@@ -1,0 +1,98 @@
+id: d1-run-spec-validation
+phase: D
+kind: script
+description: >
+  Run the rendered Playwright specs against the booted legacy application and
+  report, per lifted RULE in scope, whether the legacy system actually behaves
+  as the lift says. This is the only step that checks whether any part of the
+  spec is TRUE, as opposed to complete. See docs/phase-d-spec-validation.md.
+
+  A failure here means the SPEC is wrong, not the application. That inverts
+  the normal reading of a red test and is the most important thing about this
+  step: c4 failing says the tests do not match the code; d1 failing says the
+  lift misread the rule. The fix routes back to a3-lift-rule for human
+  review — it is never a retry, and never a change to the legacy app.
+input:
+  type: whole_application
+  source: >
+    every rendered .spec.ts from c3 (spec_format including playwright), the
+    booted legacy application, nodes.jsonl (for the lifted RULE nodes and
+    their DERIVED_FROM edges), the behaviors that passed c6, and
+    framework.yaml: spec_validation_scope
+  bound: not applicable (deterministic run over every in-scope behavior)
+output_schema: schemas/d1-run-spec-validation.schema.json
+scope:
+  description: >
+    framework.yaml: spec_validation_scope selects what runs, and is consumed
+    ONLY here.
+      none                 nothing runs; every lifted RULE is reported
+                           out_of_scope and counted
+      view_and_high_risk   every behavior covering a RULE derived from an EL
+                           or NAV node, plus anything high_risk_override: true
+      full                 every behavior in the pack
+    The default is view_and_high_risk because those are exactly the behaviors
+    whose evidence c4 structurally cannot produce. Everything else already has
+    a coverage-backed test, so a browser run buys a second look at something
+    already checked — at the cost docs/phase-0-environment.md warns about for
+    the ui seam.
+outcomes:
+  description: >
+    One per lifted RULE in scope. The report is rule-level, not
+    scenario-level, because "94% of scenarios passed" says nothing about
+    whether this behavior's twelve EL lifts were among them.
+      validated       a case exercised the rule; the app behaved as the lift
+                      says
+      contradicted    a case exercised it; the app did not. THE SPEC IS
+                      WRONG. Blocks Phase C sign-off for the owning behavior
+      not_exercised   a case exists but could not reach the required state —
+                      the seeded data cannot produce it, or the EL attribute
+                      has no browser-observable assertion. A finding about
+                      the fixture set or the extraction, recorded, NOT a pass
+      out_of_scope    excluded by spec_validation_scope; counted, and seeded
+                      into the open-questions register by c9
+    not_exercised is its own outcome rather than a failure for the reason
+    Phase 0 gives about seed data: "unreachable given this data" and
+    "unreachable given any data" are different claims, and only the second is
+    about the application.
+validators:
+  - spec_validation_recorded — see validators/README.md. Every lifted RULE has
+    exactly one outcome; every in-scope behavior was attempted; the recorded
+    scope matches framework.yaml
+  - every rule_id in the report resolves to an active RULE node in nodes.jsonl
+    with a DERIVED_FROM edge, and every scenario_id to a scenario or decision-
+    table row in the owning behavior
+  - zero rules are reported contradicted (this is the exit gate)
+  - no rule is reported validated on the strength of a case that asserted
+    nothing — a rendered case with no expect() is a c3 defect, not a pass
+escalate:
+  trigger: not applicable (script step; a browser crash or an unreachable app
+    is an environment failure to fix, not an escalation)
+  action: >
+    a contradicted rule is NOT retried. It is a defective lift, routed to
+    human review of a3-lift-rule's output for that source node, and the
+    correction is made in the lift — after which c1/c2/c3 re-derive and this
+    step re-runs. A not_exercised rule caused by seed data routes to the
+    Phase 0 seed-data record, not to this step.
+idempotent: true
+resumable: true
+notes: >
+  There is no LLM step in Phase D. The rendering is a deterministic mapping
+  (templates/renderers/playwright.md) and this is a run. The one judgment the
+  phase produces — was this lift wrong — is a human review action that this
+  step's report triggers rather than performs.
+
+  Phase D is not redundant with c4 and the reason is structural, not a matter
+  of degree. At legacy_test_seam: service, c4 never renders a page, so every
+  EL-derived rule, every NAV rule, and every render_guard on a layout_tree
+  container is extracted, lifted, turned into acceptance criteria, rendered
+  into a test, and then executed by nothing. Those are the framework's
+  headline claims. This step is what checks them.
+
+  spec_validation_scope: none is a legitimate choice and the framework has no
+  standing to insist otherwise — whether validating the spec is worth the
+  investment is the adopting team's call. What it must not be is silent: this
+  step still emits an outcome for every lifted rule (all out_of_scope), c9
+  records the counts in the manifest, and each unvalidated rule seeds an
+  open-questions entry. Same discipline as not_sampled in the triage log —
+  "we chose not to validate these" and "there was nothing to validate" must
+  not read identically to whoever opens the pack.

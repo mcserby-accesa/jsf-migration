@@ -68,7 +68,12 @@ to run derived tests against at all).
    This check only needs to prove reachability, not build the harness —
    harness construction beyond one throwaway test is Phase 0b's concern.
    Record the choice and the rejected alternatives' reasons in the same
-   checklist file referenced in "Exit criteria" below.
+   checklist file referenced in "Exit criteria" below. Record
+   `spec_validation_scope` there too (`docs/phase-d-spec-validation.md`):
+   whether Phase D validates the lifted EL/NAV rules through a browser is an
+   investment decision, `none` is a legitimate answer, and this checklist is
+   where the framework already writes down a seam choice and what it
+   forfeits.
 5. **BPMN engine identified, if the app has BPMN processes.** Set
    `framework.yaml: bpmn_source_engine` to the engine the legacy app
    actually runs, and confirm the `.bpmn` files are readable. That is the

@@ -30,6 +30,7 @@ enough to rebuild it without ever opening the legacy source:
 | Identity model | The role vocabulary, the authentication mechanism, and where credentials actually live |
 | Coverage triage log | Every legacy branch the specs *didn't* reach, and why that's acceptable |
 | Open-questions register | Every question the legacy application doesn't answer, stated rather than left to be discovered |
+| Rule validation report | For every lifted rule, whether the running legacy app actually agreed with it |
 
 Full manifest: [docs/spec-pack.md](docs/spec-pack.md).
 
@@ -75,7 +76,7 @@ Each phase has a gate. You do not proceed past a failing gate.
 | **A** | Inventory | Run extractors over source, views, config, DB, BPMN; photograph the running screens | `nodes.jsonl` + `edges.jsonl` — the legacy graph | Nothing ambiguous or unresolvable remains |
 | **B** | Behaviors | Group graph nodes into behaviors and draft their specs | `BHV-####.md` documents, correctly sized | Every node belongs to some behavior |
 | **C** | Acceptance | Write acceptance criteria, render tests, run them against the legacy app, triage what they missed | Tests, decision tables, triage log, API contract | Zero untriaged branches |
-| **D** | Spec validation | Drive the specs through a browser against the legacy app | Confirmation the specs match reality | *(designed, not yet authored)* |
+| **D** | Spec validation | Drive the specs through a browser against the legacy app | Per-rule confirmation that the lifts are true, not just complete | No lifted rule contradicts the legacy app |
 
 Phase 0 and 0b are one-time entry gates. A, B, and C repeat per behavior.
 
@@ -121,10 +122,17 @@ system's specs need before anything can check them against one that has no
 pages. [Details](docs/phase-c-acceptance.md)
 
 **Phase D — Spec validation.** Phase C's tests run at the service layer, so
-they never render a page — meaning the EL and navigation rules extracted in
-Phase A are specified but never actually executed. Phase D closes that with
-browser-driven tests against the legacy app. Designed, not yet authored; see
-[DECISIONS.md](DECISIONS.md).
+they never render a page — meaning the EL rules, the navigation rules, and the
+conditional layout extracted in Phase A are specified and then executed by
+nothing. Phase D closes that: `playwright` is a third rendered format, driven
+through a browser against the *legacy* app, reporting per lifted rule whether
+the application actually behaves as the lift says.
+
+A failure here means the **spec** is wrong, not the app — which is the whole
+point, and the opposite of how a red test usually reads. Validating is an
+investment decision (`spec_validation_scope`, and `none` is a real option); the
+pack records how many rules went unchecked either way.
+[Details](docs/phase-d-spec-validation.md)
 
 ## How to use it
 
@@ -202,7 +210,7 @@ DECISIONS.md              what's settled, what's still open
 docs/
   method.md               the method end to end — read first
   spec-pack.md            the deliverable: manifest and completeness gate
-  phase-*.md              one document per phase
+  phase-*.md              one document per phase (0, 0b, A, B, C, D)
   metrics.md              every metric: formula, threshold, what it triggers
 
 steps/*.yaml              one contract per pipeline step

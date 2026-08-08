@@ -1,0 +1,103 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "d1-run-spec-validation.schema.json",
+  "title": "d1-run-spec-validation report (also the pack's validation/rule-outcomes.jsonl source)",
+  "description": "Whether the legacy application actually behaves as the lifted rules say. Rule-level rather than scenario-level on purpose: a scenario pass rate says nothing about whether a behavior's EL lifts were among the scenarios that ran, and those lifts are the framework's headline claim. See docs/phase-d-spec-validation.md.",
+  "type": "object",
+  "required": ["status", "scope", "counts", "outcomes"],
+  "additionalProperties": false,
+  "properties": {
+    "status": {
+      "type": "string",
+      "enum": ["pass", "fail"],
+      "description": "fail when any outcome is contradicted. not_exercised does not fail the step — it is a recorded finding about the fixture set or the extraction, and failing on it would push teams toward deleting the case rather than fixing the data."
+    },
+    "scope": {
+      "type": "string",
+      "enum": ["none", "view_and_high_risk", "full"],
+      "description": "framework.yaml: spec_validation_scope as actually run. Recorded so a report cannot be read as more thorough than the run that produced it."
+    },
+    "counts": {
+      "type": "object",
+      "required": ["rules_total", "validated", "contradicted", "not_exercised", "out_of_scope"],
+      "additionalProperties": false,
+      "description": "rules_total is every active lifted RULE in the pack, not every rule in scope — the ratio of out_of_scope to rules_total is the number that says how much of the framework's central claim went unchecked, and it is only legible if the denominator is the whole population.",
+      "properties": {
+        "rules_total": { "type": "integer", "minimum": 0 },
+        "validated": { "type": "integer", "minimum": 0 },
+        "contradicted": { "type": "integer", "minimum": 0 },
+        "not_exercised": { "type": "integer", "minimum": 0 },
+        "out_of_scope": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "browser": {
+      "type": "object",
+      "required": ["name", "version"],
+      "additionalProperties": false,
+      "description": "What drove the run. Recorded because a visibility assertion is a browser-behaviour claim as much as an application one, and a report without it cannot be reproduced.",
+      "properties": {
+        "name": { "type": "string" },
+        "version": { "type": "string" },
+        "viewport": {
+          "type": "object",
+          "required": ["width", "height"],
+          "additionalProperties": false,
+          "properties": {
+            "width": { "type": "integer", "minimum": 1 },
+            "height": { "type": "integer", "minimum": 1 }
+          }
+        }
+      }
+    },
+    "outcomes": {
+      "type": "array",
+      "description": "Exactly one entry per active lifted RULE node, including those out of scope. A rule with no entry is an unreported rule, which is the state this whole step exists to make impossible.",
+      "items": {
+        "type": "object",
+        "required": ["rule_id", "source_node_id", "source_kind", "outcome"],
+        "additionalProperties": false,
+        "properties": {
+          "rule_id": { "type": "string", "pattern": "^RULE-[0-9]{4,}$" },
+          "source_node_id": {
+            "type": "string",
+            "description": "The node the rule was lifted from, via its DERIVED_FROM edge."
+          },
+          "source_kind": {
+            "type": "string",
+            "enum": ["el", "db-body", "computation", "nav"],
+            "description": "Echoed from a3-lift-rule, plus `nav` for a rule lifted from a NAV node's condition. This is what makes the report readable: an el-derived rule reported out_of_scope is a claim nothing checked, while a computation-derived one still has c4's branch coverage behind it."
+          },
+          "behavior_id": { "type": "string", "pattern": "^BHV-[0-9]{4,}$" },
+          "outcome": {
+            "type": "string",
+            "enum": ["validated", "contradicted", "not_exercised", "out_of_scope"],
+            "description": "validated: a case exercised the rule and the app agreed. contradicted: it did not — the SPEC is wrong, blocking the owning behavior and routing to a3-lift-rule review. not_exercised: a case exists but the state was unreachable, or the EL attribute has no browser-observable assertion. out_of_scope: excluded by scope, counted, and seeded into the open-questions register by c9."
+          },
+          "cases": {
+            "type": "array",
+            "description": "The rendered cases that targeted this rule, by scenario or decision-table-row id. Several for a rule with a decision table — one per reduced row — and the rule is validated only when every one of them is.",
+            "items": {
+              "type": "object",
+              "required": ["scenario_id", "result"],
+              "additionalProperties": false,
+              "properties": {
+                "scenario_id": { "type": "string" },
+                "result": { "type": "string", "enum": ["pass", "fail", "skipped"] },
+                "detail": { "type": "string", "description": "For a fail: what was asserted and what was observed. This is the text a human reads when deciding whether the lift or the fixture was wrong, so an assertion diff belongs here rather than a stack trace." }
+              }
+            }
+          },
+          "reason": {
+            "type": ["string", "null"],
+            "description": "Required in substance for not_exercised and out_of_scope: which state could not be reached and why, or which scope rule excluded it. Null is acceptable only for validated. A not_exercised with no reason is indistinguishable from a case nobody wrote."
+          },
+          "open_question_id": {
+            "type": ["string", "null"],
+            "pattern": "^OQ-[0-9]{4,}$",
+            "description": "Set by c9 when this outcome seeded an unvalidated_lifted_rule entry. Null before assembly."
+          }
+        }
+      }
+    }
+  }
+}
