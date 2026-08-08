@@ -44,7 +44,8 @@ notes: >
 
   A deterministic script, run alongside this step (not part of its LLM
   output_schema), renders the same neighborhood_nodes/neighborhood_edges
-  given as this step's input into a Mermaid diagram and attaches it to the
+  given as this step's input into a Mermaid diagram (per
+  templates/renderers/mermaid.md, family 1) and attaches it to the
   BHV as neighborhood_diagram. See docs/phase-b-behaviors.md, "Neighborhood
   diagram" — this is mechanical rendering, not something b3's LLM call
   should be asked to produce.

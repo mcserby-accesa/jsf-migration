@@ -154,6 +154,41 @@ file is the authority on *when it runs*.
   checks the properties that make the file *readable* — the same division of
   labour as `rendering_idempotent` versus `rendered_artifacts_parse`.
 
+## `mermaid_diagrams_render`
+
+- **Applies to:** every `.mmd` file in the pack and every `neighborhood_diagram`
+  field, checked by `c9`.
+- **Reads:** the diagrams, their sources (`nodes.jsonl`, `data/schema.json`,
+  `behaviors/order.json`, `TPL.nav_menu`), and a real Mermaid parser.
+- **Checks:**
+  1. Each diagram **parses** under a real Mermaid parser — not that it looks
+     right, that no syntax or diagram-type error occurs. Same argument as
+     `rendered_artifacts_parse`: the framework specifies a deterministic
+     mapping, which guarantees the same input renders to the same bytes and
+     guarantees nothing about whether those bytes load.
+  2. Every sanitised node id maps back to exactly one id that resolves within
+     the pack (`SCR0142` → `SCR-0142`), and no two distinct ids sanitise to the
+     same identifier — which would silently merge two nodes into one box.
+  3. Every diagram carries its `%% generated from …` provenance line.
+  4. Every diagram is within its declared node cap, **or** carries the note
+     node and has its omission recorded in the manifest. A capped diagram with
+     no note fails.
+  5. Each family's derived semantics hold: ERD cardinality matches the FK
+     column's nullability; every `cycle`-classed behavior in `order.mmd` is in
+     a `cycle_group` in `order.json` and vice versa; every dotted edge
+     corresponds to a real `GUARDS` edge, a non-null `NAV.condition`, or a
+     `roles_visible_to`/`render_guard` on a menu item.
+- **Output:** `{ "passed": bool, "failures": [{ "path": "<file or BHV id>", "detail": "<parser message or inconsistency>" }] }`.
+- **On failure:** blocks pack handover. The fix is in
+  `templates/renderers/mermaid.md` or in the source JSON, never in the `.mmd` —
+  a hand-edited diagram fails `projection_regenerates_identically` on the next
+  pass.
+- **What it deliberately does not check:** that a diagram is *useful*. A
+  legible-diagram threshold is a judgment, and the caps in the renderer are the
+  framework's mechanical stand-in for it. What this prevents is a diagram that
+  will not render, that merges two nodes into one, or that quietly shows half a
+  graph.
+
 ## `value_facts_complete`
 
 - **Applies to:** every active `SCR`/`SVC`/`DB` node, checked by `a1` and

@@ -1,0 +1,9 @@
+%% generated from BHV-0142 covered SCR/NAV nodes by templates/renderers/mermaid.md — do not edit
+flowchart LR
+  SCR0110["SCR-0110: Leave List (BHV-0110)"]
+  SCR0142["SCR-0142: Leave Request Detail"]
+  SCR0150["SCR-0150: Leave Request Confirmation"]
+  SCR0142 -->|"confirmation → confirmation.xhtml"| SCR0150
+  SCR0142 -.->|"cancel → list.xhtml (RULE-0031)"| SCR0110
+  classDef external stroke-dasharray: 2 2
+  class SCR0110 external

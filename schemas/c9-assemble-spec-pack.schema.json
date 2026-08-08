@@ -29,6 +29,25 @@
       }
     },
     "behavior_count": { "type": "integer", "minimum": 0 },
+    "diagram_omissions": {
+      "type": "array",
+      "description": "Every Mermaid diagram whose node cap truncated it, with what was left out and where the rest went. Empty for a pack whose diagrams all fit. Recorded because a capped diagram reads as complete, and the note node inside it is only seen by someone who already opened it.",
+      "items": {
+        "type": "object",
+        "required": ["path", "shown", "total", "spilled_to"],
+        "additionalProperties": false,
+        "properties": {
+          "path": { "type": "string" },
+          "shown": { "type": "integer", "minimum": 0 },
+          "total": { "type": "integer", "minimum": 0 },
+          "spilled_to": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "The split files carrying the remainder, e.g. data/erd-1.mmd. Empty only when the omission is a hard cap with no split defined."
+          }
+        }
+      }
+    },
     "spec_validation": {
       "type": "object",
       "required": ["scope", "rules_total", "validated", "not_exercised", "out_of_scope"],
@@ -105,6 +124,7 @@
               "spec_validation_recorded",
               "layout_tree_complete",
               "wireframe_renders_for_every_screen",
+              "mermaid_diagrams_render",
               "screen_reference_captured",
               "identity_model_present",
               "open_questions_well_formed"

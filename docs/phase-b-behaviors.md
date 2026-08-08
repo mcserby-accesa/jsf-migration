@@ -58,7 +58,10 @@ behavior-spec.yaml` then drafts the actual `BHV-####.md` body
 Alongside `b3`, a deterministic script renders the same bounded neighborhood
 (the `neighborhood_nodes`/`neighborhood_edges` `b3` was given as input) as a
 Mermaid graph and attaches it to the drafted `BHV-####.md` as
-`neighborhood_diagram`. This is mechanical, not an LLM judgment — the
+`neighborhood_diagram`. The mapping is specified in
+`templates/renderers/mermaid.md` (family 1), alongside the pack's three other
+diagram families — they share their id sanitisation, escaping, ordering and
+capping rules. This is mechanical, not an LLM judgment — the
 neighborhood is already capped at 2 hops for `b3`'s sake, which happens to
 also be exactly the size a diagram stays legible at. There is no
 whole-inventory diagram anywhere in this framework: at real application

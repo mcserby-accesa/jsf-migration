@@ -31,6 +31,7 @@ enough to rebuild it without ever opening the legacy source:
 | Coverage triage log | Every legacy branch the specs *didn't* reach, and why that's acceptable |
 | Open-questions register | Every question the legacy application doesn't answer, stated rather than left to be discovered |
 | Rule validation report | For every lifted rule, whether the running legacy app actually agreed with it |
+| Diagrams | An ERD, the menu with who-can-reach-what, the build order with its cycles, and a screen flow per behavior — all Mermaid, all regenerated |
 
 Full manifest: [docs/spec-pack.md](docs/spec-pack.md).
 
@@ -220,8 +221,9 @@ prompts/*.md              prompt template + examples, per model-driven step
 templates/
   BHV-template.md         the behavior document structure
   target-conventions.yaml your target decisions — api, identity, process, ui
-  renderers/*.md          how a behavior becomes Gherkin / JUnit,
-                          how a layout tree becomes a wireframe
+  renderers/*.md          how a behavior becomes Gherkin / JUnit / Playwright,
+                          a layout tree becomes a wireframe, and pack facts
+                          become Mermaid
 examples/                 one fully worked behavior, both renderings
 ```
 

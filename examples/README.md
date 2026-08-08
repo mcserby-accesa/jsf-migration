@@ -47,18 +47,34 @@ Files, in the order they'd be produced by the pipeline:
    captured image of this screen as the booted legacy application actually
    rendered it (`a8`). It is non-normative — nothing in the pack derives
    from it or is checked against it.
-3. `BHV-0142.md` — the canonical behavior document (`b3`+`b4` drafted the
+3. `mermaid-excerpt/` — the pack's four diagram families, rendered per
+   `templates/renderers/mermaid.md`: `erd.mmd` (the data model, with
+   precision/scale/value domains on the attributes — the value facts an ORM's
+   default silently overrides), `menu.mmd` (how a user reaches a screen and who
+   is allowed to, with role-guarded edges dotted, and one deliberately
+   `unresolved:` target to show what an unmatched menu destination looks like),
+   `order.mmd` (build waves, with a two-behavior cycle drawn thick — `order.json`
+   reports cycles and never breaks them, and this is where one becomes visible),
+   and `BHV-0142-flow.mmd` (this behavior's screen flow, one hop out to a screen
+   another behavior owns). The fourth family, `neighborhood_diagram`, is inline
+   in `BHV-0142.md` below.
+
+   All five were checked against a real Mermaid parser, which is what
+   `mermaid_diagrams_render` requires of a pack — a deterministic mapping
+   guarantees the same bytes every time and guarantees nothing about whether
+   they load.
+4. `BHV-0142.md` — the canonical behavior document (`b3`+`b4` drafted the
    boundary and scenario stubs; `c1` derived the final AC list; `c2` added
    the decision table for the one compound condition; `c5`'s triage
    findings added scenario S03 after the fact). Structure follows
    `templates/BHV-template.md`.
-4. `triage-log-excerpt.jsonl` — two entries from `c5-triage-uncovered-branch`
+5. `triage-log-excerpt.jsonl` — two entries from `c5-triage-uncovered-branch`
    showing one `missing_scenario` (which fed back into `BHV-0142.md` as
    scenario S03) and one `unreachable_defensive` (accepted, with its
    justification).
-5. `BHV-0142.feature` — the Gherkin rendering of `BHV-0142.md`, produced
+6. `BHV-0142.feature` — the Gherkin rendering of `BHV-0142.md`, produced
    mechanically by `c3-render-tests` per `templates/renderers/gherkin.md`.
-6. `BHV0142LeaveRequestDetailSubmissionTest.java` — the JUnit rendering of
+7. `BHV0142LeaveRequestDetailSubmissionTest.java` — the JUnit rendering of
    the same document, per `templates/renderers/junit.md`, with
    `legacy_test_seam: service`.
 

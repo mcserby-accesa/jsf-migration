@@ -1,0 +1,12 @@
+%% generated from TPL-0003 nav_menu by templates/renderers/mermaid.md — do not edit
+flowchart LR
+  m_leave(["My leave"])
+  m_leave_new(["New request"])
+  m_approvals(["Approvals"])
+  SCR0142["SCR-0142: Leave Request Detail"]
+  SCR0180["unresolved: /leave/approvals.xhtml"]
+  m_leave --> m_leave_new
+  m_leave_new --> SCR0142
+  m_approvals -.->|"MANAGER, HR_ADMIN (EL-0091)"| SCR0180
+  classDef guarded stroke-dasharray: 4 3
+  class m_approvals guarded

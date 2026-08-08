@@ -57,14 +57,16 @@ spec-pack/
 
   behaviors/
     order.json                   dependency order and waves           [projection]
+    order.mmd                    the same, drawn — cycles visible     [projection]
     ownership.json               who owns each shared node            [projection]
     step-index.json              shared step text and its owner       [projection]
     scenario-bindings.json       where each scenario is observable    [projection]
     progress.jsonl               implementation progress  [mutable — yours, starts empty]
     BHV-0142/
-      BHV-0142.md                the spec            [original]
+      BHV-0142.md                the spec (carries its own diagram)   [original]
       bundle.json                everything BHV-0142 covers, inlined  [projection]
-      tests/                     rendered Gherkin and/or JUnit        [projection]
+      flow.mmd                   this behavior's screen flow          [projection]
+      tests/                     rendered Gherkin / JUnit / Playwright [projection]
 
   inventory/
     nodes.jsonl                  the legacy graph    [original]
@@ -74,6 +76,7 @@ spec-pack/
     pages.json                   page skeletons + layout trees        [projection]
     services.json                bean/service method surfaces         [projection]
     templates.json               page frames, fragments, the menu     [projection]
+    menu.mmd                     the shell, drawn — who reaches what  [projection]
     wireframes/
       SCR-####.txt               each screen, drawn                   [projection]
       TPL-####.txt               each template frame, drawn           [projection]
@@ -96,6 +99,7 @@ spec-pack/
 
   data/
     schema.json                  tables, columns, keys, triggers      [projection]
+    erd.mmd                      the data model, drawn                [projection]
     fixture-order.json           safe seed/teardown order             [projection]
 
   auth/
@@ -230,6 +234,31 @@ procedures with pointers to their source. Trigger and procedure *logic* is
 not here — it was lifted into `RULE` nodes by `a3-lift-rule` and appears in whichever
 behavior covers it, because it is business logic that happens to live in the
 database.
+
+**The Mermaid diagrams** — `data/erd.mmd`, `views/menu.mmd`,
+`behaviors/order.mmd`, and one `flow.mmd` per behavior, plus the
+`neighborhood_diagram` already embedded in every `BHV-####.md`. All are
+projections rendered by `templates/renderers/mermaid.md`; each holds no fact its
+source doesn't, and anything true in a diagram and absent from the source JSON
+is a renderer bug.
+
+Each answers a question the text answers less well:
+
+| Diagram | Question |
+|---|---|
+| `data/erd.mmd` | what is the data model — with precision, scale and value domains on the attributes, since those are exactly what an ORM's default silently overrides |
+| `views/menu.mmd` | how does a user reach a screen, and **who is allowed to** — dotted, role-labelled edges. `auth/constraints.json` says it in text; this is the only place it is visible at a glance |
+| `behaviors/order.mmd` | what can be built in parallel, and **where the cycles are**. `order.json` reports cycles and never breaks them; a cycle is hard to see in JSON and immediate in a picture |
+| `behaviors/BHV-####/flow.mmd` | where this behavior's screens lead, including one hop into screens other behaviors own |
+
+Two things they deliberately are not. There is **no whole-inventory diagram**
+— at thousands of nodes it is illegible and past Mermaid's practical rendering
+size, and a whole-graph question is a query against `graph_store`. And the
+screen flow is scoped **per behavior** rather than application-wide, for the
+same reason: a 200-screen hairball answers nothing. Every family declares its
+node cap and, when a cap truncates, says so in the diagram and in the manifest
+— a diagram that silently dropped half its graph is worse than none, because it
+reads as complete.
 
 **`data/fixture-order.json`** — A topological ordering of the tables by
 foreign key, with the insert order and the reverse delete order. Derived
@@ -507,6 +536,7 @@ The pack is not handed over until every one of these passes:
 | `value_facts_complete` | is every value fact present on every node that must carry it |
 | `layout_tree_complete` | does every screen have a layout with every field placed once |
 | `wireframe_renders_for_every_screen` | is there a readable wireframe per screen and template |
+| `mermaid_diagrams_render` | does every diagram parse, resolve its ids, and declare any cap that truncated it |
 | `screen_reference_captured` | is every screen photographed or accounted for |
 | `identity_model_present` | does the pack state exactly one identity model |
 | `open_questions_well_formed` | is every seeded question resolvable, with its subjects present |

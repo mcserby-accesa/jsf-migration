@@ -8,7 +8,9 @@ description: >
   behaviors/order.json, behaviors/ownership.json, behaviors/step-index.json,
   behaviors/scenario-bindings.json, data/fixture-order.json and
   auth/identity.json, render views/wireframes/ from views/pages.json, copy
-  a8's captured screen references and their index, carry
+  a8's captured screen references and their index, render the Mermaid
+  diagrams (data/erd.mmd, views/menu.mmd, behaviors/order.mmd, one flow.mmd
+  per behavior), carry
   handover/target-conventions.yaml, copy d1's validation report to
   validation/rule-outcomes.jsonl, seed
   triage/open-questions.jsonl and an empty behaviors/progress.jsonl, write
@@ -43,6 +45,7 @@ validators:
   - spec_validation_recorded
   - layout_tree_complete
   - wireframe_renders_for_every_screen
+  - mermaid_diagrams_render
   - screen_reference_captured
   - identity_model_present
   - open_questions_well_formed
@@ -61,6 +64,38 @@ wireframe_rendering:
     projection whose bytes depend on a parameter cannot be diffed across
     re-runs, which is most of what it is for. Covered by
     projection_regenerates_identically like every other projection.
+mermaid_rendering:
+  description: >
+    data/erd.mmd, views/menu.mmd, behaviors/order.mmd and one
+    behaviors/BHV-####/flow.mmd are projections of schema.json, TPL.nav_menu,
+    order.json and the behavior's covered SCR/NAV nodes respectively, rendered
+    by templates/renderers/mermaid.md. They hold no fact their sources do not;
+    anything true in a diagram and absent from the source JSON is a renderer
+    bug. The neighborhood_diagram inside each BHV-####.md is the fourth family
+    and is rendered alongside b3, not here.
+
+    Each earns its place by answering something the text answers less well —
+    the ERD by carrying precision/scale/value domains on the attributes, which
+    are exactly what an ORM's default silently overrides; menu.mmd by showing
+    who may reach a screen at a glance, where auth/constraints.json says it in
+    text; order.mmd by making cycles visible, which order.json reports and
+    deliberately never breaks.
+
+    Two scope limits are deliberate and enforced by the renderer's caps. There
+    is NO whole-inventory diagram: at thousands of nodes it is illegible and
+    past Mermaid's practical rendering size, and a whole-graph question is a
+    query against graph_store (DECISIONS.md). And screen flow is scoped per
+    behavior rather than application-wide, for the same reason a 200-screen
+    hairball answers nothing — bounded by COVERS, so its size is bounded by
+    the behavior sizing rules already in force.
+
+    When a cap truncates, the diagram carries a visible note node AND this step
+    records the omission in the manifest. A diagram that silently dropped half
+    its graph is worse than no diagram, because it reads as complete.
+
+    The generated README inlines the ERD only. The other three are linked: an
+    index carrying four large diagrams stops being an index, and the ERD is the
+    one that is both whole-system and bounded by nature.
 screen_references:
   description: >
     reference/screenshots/ is copied from a8's output and indexed by a8's own

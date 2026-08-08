@@ -1,0 +1,20 @@
+%% generated from behaviors/order.json by templates/renderers/mermaid.md — do not edit
+flowchart TD
+  subgraph w0["Wave 0"]
+    BHV0031["BHV-0031: Approval panel visibility rule"]
+    BHV0110["BHV-0110: Leave list"]
+  end
+  subgraph w1["Wave 1"]
+    BHV0142["BHV-0142: Leave request detail submission"]
+  end
+  subgraph w2["Wave 2"]
+    BHV0201["BHV-0201: Payroll export"]
+    BHV0202["BHV-0202: Payroll adjustment"]
+  end
+  BHV0031 --> BHV0142
+  BHV0110 --> BHV0142
+  BHV0142 --> BHV0201
+  BHV0201 ==> BHV0202
+  BHV0202 ==> BHV0201
+  classDef cycle stroke-width: 3px
+  class BHV0201,BHV0202 cycle

@@ -1,0 +1,21 @@
+%% generated from data/schema.json by templates/renderers/mermaid.md — do not edit
+erDiagram
+  EMPLOYEE {
+    NUMBER ID PK "precision 19, scale 0"
+    VARCHAR2 FULL_NAME "length 120, not null"
+  }
+  LEAVE_REQUEST {
+    NUMBER ID PK "precision 19, scale 0"
+    VARCHAR2 STATUS "length 32, not null, default 'DRAFT', domain: DRAFT|PENDING_MANAGER_APP…"
+    NUMBER WORKING_DAYS "precision 5, scale 1, not null"
+    NUMBER EMPLOYEE_ID FK "precision 19, scale 0, not null"
+  }
+  %% trigger: trg_leave_request_audit (RULE-0060)
+  LEAVE_REQUEST_AUDIT {
+    NUMBER ID PK "precision 19, scale 0"
+    NUMBER REQUEST_ID FK "precision 19, scale 0, not null"
+    VARCHAR2 OLD_STATUS "length 32"
+    VARCHAR2 NEW_STATUS "length 32"
+  }
+  EMPLOYEE ||--|{ LEAVE_REQUEST : "employee"
+  LEAVE_REQUEST ||--|{ LEAVE_REQUEST_AUDIT : "request"
