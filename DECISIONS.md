@@ -506,9 +506,9 @@ template's comments, where they can be re-checked — engine lifecycles date
 faster than anything else in this repository, and a recommendation whose basis
 is not written down cannot be re-evaluated when it goes stale.
 
-**One conventions file.** `api-conventions.yaml` and `ui-conventions.yaml`
-merge into `templates/target-conventions.yaml`, with the process decision as a
-third section and identity as a fourth. Three files was already sprawl and a
+**One conventions file.** The former `api-conventions.yaml` and
+`ui-conventions.yaml` merge into `templates/target-conventions.yaml`, with the
+process decision as a third section and identity as a fourth. Three files was already sprawl and a
 fourth would have been worse; more usefully, the required/recorded distinction
 is now carried by section comments rather than by which file something lives
 in, which is where it belongs:

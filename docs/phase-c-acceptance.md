@@ -218,12 +218,11 @@ as `c5`'s sampling rate — the mechanism is decided now, the rate is not.
 plus the application's `target-conventions.yaml` — see `docs/spec-pack.md`,
 "The API contract." Two things about its scope matter here.
 
-First, the surface is the whole client-visible surface. A legacy JSF screen
-that renders from bean properties, a navigation menu, a converter that
-formats a value for display: none is a public service method, and each is
-something the replacement's client must fetch from somewhere. `c7` records
-a verdict for every `SCR` and `NAV` node as well as every `SVC` method — an
-operation, or `client_side_only`, or unmapped-with-a-reason routed to `c8`.
+First, the surface is the whole client-visible surface, not the part shaped
+like a service method (`docs/spec-pack.md`, "The API contract," argues why).
+So `c7` records a verdict for every `SCR` and `NAV` node as well as every
+`SVC` method — an operation, or `client_side_only`, or unmapped-with-a-reason
+routed to `c8`.
 
 Second, `c7b` then binds each of the behavior's scenarios to where the
 target can observe it: a named operation, the client, the domain layer, or

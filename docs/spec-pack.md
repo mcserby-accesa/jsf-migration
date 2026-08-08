@@ -177,14 +177,16 @@ proportion, visual weight — as a reference a human implements against, plus
 the only practical way for a reviewer to catch a layout tree that resolved a
 dynamic composition wrongly.
 
-**`handover/ui-conventions.yaml`** — Optional, and unlike
-`target-conventions.yaml` nothing derives from it. It records how the extracted
-layout maps onto the target UI stack: which component a `tabs` container
-becomes, whether a legacy fixed width survives, what happens to the shell.
-The framework can carry that decision but cannot apply it, because applying
-it is implementation. Recorded once here, it stops being made fifty times by
-whoever reaches each screen first. A pack without it passes every gate; the
-manifest records that the mapping was not stated.
+**`handover/target-conventions.yaml`** — The application's target decisions,
+carried in verbatim and hashed. Its `api:` and `identity:` sections are what
+the API contract was derived from, so the pack could not exist without them.
+Its `process:` (which engine runs the carried-over `.bpmn` files) and `ui:`
+(how the extracted layout maps onto the component library) sections are read
+by nothing: the framework can carry those decisions and cannot apply them,
+because applying them is implementation. They ship anyway, because each is
+otherwise made fifty times by whoever reaches each process and each screen
+first. `manifest.json` records per-section which were authored, so an empty
+one is a statement rather than a silence.
 
 **`api/`** — The target REST contract. See the next section; this is the one
 part of the pack that describes the *new* system rather than the old one.
@@ -445,73 +447,64 @@ dependencies, and a safe place to record state; the process on top is yours.
 
 ## What the pack deliberately does not contain
 
-- **Legacy source.** Not as an appendix, not as a fallback, not "alongside."
-  Everything an implementer needs is extracted into an artifact first. A pack
-  that ships the `.xhtml` files has quietly reopened the unaudited channel
-  the whole method exists to close (`DECISIONS.md`, principle 5).
-- **Target architecture.** Module boundaries, framework choices, persistence
-  strategy, component library, styling. The API contract's *conventions* are
-  an input to the pack, not an output of it, and so are the UI conventions.
-- **Migrated data.** Moving legacy rows into the new schema is real work and
-  a real risk, but it is an ETL runbook, not a specification.
-- **Visual fidelity.** The pack states a screen's containment, order, widget
-  kinds, and conditionality, and ships a photograph of what that looked like.
-  It does not state spacing, colour, typography, or density as *facts*, does
-  not extract them, and asserts nothing about them — in a component-library
-  application most of them are not in the application's source to extract.
-  Layout is not on this list; it used to be, and that was the mistake
-  `DECISIONS.md`'s layout entry records.
-- **Any check that a rebuild matched.** The pack says what the legacy screen
-  was. Nothing here verifies that what gets built resembles it — the
-  framework has no standing to (`DECISIONS.md`, "Structural fidelity is the
-  implementer's call") and ships no validator that tries.
+Legacy source, target architecture, migrated data, visual fidelity as stated
+fact, and any check that a rebuild matched its source.
+
+**`DECISIONS.md`, "explicitly out of scope," is the authority on each and on
+why.** It is not restated here: an earlier version of this section restated
+all five, and the two copies were edited separately in the same session and
+came out worded differently — which is precisely the failure the pack's own
+one-fact-one-place rule exists to prevent, occurring in the document that
+states the rule.
+
+Two points specific to the pack rather than to scope: the API and UI
+*conventions* are an input to the pack rather than an output of it, and
+layout is **not** covered by the visual-fidelity exclusion — it used to be,
+and that was the mistake `DECISIONS.md`'s layout entry records.
 
 ## Completeness gate — `spec_pack_complete`
 
-The pack is not handed over until a deterministic check passes:
+The pack is not handed over until every one of these passes:
 
-1. Every active inventory node is covered by at least one behavior, or is
-   recorded in the out-of-scope log with a written reason.
-2. Every behavior in `behaviors/` passed `c6`.
-3. Every projection regenerates byte-identically from its source.
-4. Every `.bpmn` file hashes equal to its legacy source file.
-5. Every ID referenced anywhere in the pack resolves within the pack.
-6. `manifest.json` lists every file present, and every file it lists exists.
-7. Every fragment merged without collision, and every `SVC` public method,
-   every active `SCR`, and every active `NAV` node either has an endpoint,
-   a `client_side_only` verdict, or a recorded reason it has neither.
-8. No legacy source file was copied in (`.bpmn` excepted — it is a carried
-   artifact, not source standing in for a spec).
-9. Every rendered artifact parses under a real parser for its format, with
-   unique scenario titles and test-method names across the pack, and no
-   Markdown markup left in step text (`c3b`).
-10. Every scenario in the pack has exactly one surface binding, every
-    binding of surface `rest` names an operation that resolves within
-    `api/openapi.yaml`, and the bindings' `conventions_hash` matches the
-    API contract's.
-11. Every open-questions entry the pipeline seeded is well-formed and
-    resolvable: its `subject` ids exist in the pack, its status is set, and
-    every `assumed` entry states its assumption. Answering them is not a
-    gate — the pack ships with open questions by design. Shipping them
-    *unstated* is what the gate prevents.
-12. Every value fact the extractors are required to capture is present on
-    every node that must carry it, and the pack contains exactly one
-    identity model (`a5` checks this at Phase A; `c9` re-checks that what
-    passed then is what the pack actually ships).
-13. Every screen and template has a layout tree in which every field appears
-    exactly once, every guard, template reference and filled region resolves,
-    and a wireframe renders from it. Every screen has a captured reference
-    image or a recorded reason it has none.
-14. `handover/ui-conventions.yaml` is present and hashed, or recorded absent.
-    The file is optional and nothing derives from it; what the gate requires
-    is that the manifest says which, so "no UI mapping was decided" is a
-    statement rather than a silence.
+| Check | Answers |
+|---|---|
+| `inventory_coverage_complete` | is every active node covered by a behavior, or recorded out of scope with a reason |
+| `projection_regenerates_identically` | does every projection reproduce byte-for-byte from its original |
+| `bpmn_copied_verbatim` | is every `.bpmn` still identical to its legacy source |
+| `no_legacy_source_in_pack` | did any legacy source file get carried in |
+| `endpoint_contract_complete` | does every service method, screen and navigation rule have an endpoint, a `client_side_only` verdict, or a stated reason for neither |
+| `openapi_merge_consistent` | did the fragments merge without collision or dangling `$ref` |
+| `rendered_artifacts_parse` | does every rendered test actually load under a real parser |
+| `rendered_scenario_titles_unique` | can two scenarios collide in a harness's report |
+| `step_text_is_plain_text` | did Markdown emphasis survive into a step a harness compiles as a regex |
+| `step_index_complete` | is every shared step definition attributed to one owner |
+| `scenario_surface_bound` | does every scenario say where the target observes it |
+| `value_facts_complete` | is every value fact present on every node that must carry it |
+| `layout_tree_complete` | does every screen have a layout with every field placed once |
+| `wireframe_renders_for_every_screen` | is there a readable wireframe per screen and template |
+| `screen_reference_captured` | is every screen photographed or accounted for |
+| `identity_model_present` | does the pack state exactly one identity model |
+| `open_questions_well_formed` | is every seeded question resolvable, with its subjects present |
+| `dependency_order_derivable` | does the build order follow from real edges, with cycles reported |
+| `spec_pack_complete` | did every behavior pass `c6`; does every id resolve within the pack; does the manifest match what is on disk; and is `handover/target-conventions.yaml` present with its required sections and its recorded sections accounted for |
 
-The steps that produce and check all this are `a8` (screen reference
-capture), `c3b` (rendered-artifact verification), `c7` (mechanical endpoint
-derivation), `c7b` (scenario surface binding), `c8` (resolve what the rules
-couldn't map), and `c9` (assemble, render wireframes, and gate). Validator
-contracts: `validators/README.md`.
+**`validators/README.md` is the authority on what each check means** — what it
+reads, exactly what it asserts, and what to do when it fails. This table is a
+pointer, deliberately: an earlier version restated all of it in prose, and the
+prose drifted from the contracts it was restating. The pack's own rule is one
+fact in one place; it applies to this repository's documentation too.
+
+Two things the gate deliberately does **not** require. Open questions do not
+have to be *answered* — a pack ships with them by design, and what the gate
+prevents is shipping one nobody wrote down. And a `process:` or `ui:` section
+of `target-conventions.yaml` may be empty; the gate requires only that the
+manifest records which, so "nobody decided what runs these processes" is a
+statement rather than a silence.
+
+The steps that produce and check all this: `a8` (screen reference capture),
+`c3b` (rendered-artifact verification), `c7` (endpoint derivation), `c7b`
+(scenario surface binding), `c8` (resolve what the rules couldn't map), and
+`c9` (assemble, render wireframes, seed the register, gate).
 
 A pack failing any of these is incomplete, not "mostly done." The value of
 the whole method rests on the claim that this description is complete; a

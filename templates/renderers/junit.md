@@ -21,10 +21,9 @@ whose own `@ParameterizedTest` already covers that exact condition
 combination — rendering the row a second time as its own `@Test` would
 duplicate, not add, coverage. This row is still accounted for by `c3`'s
 "no silent drops" validator via its `decision_table_ref` association (see
-`steps/c3-render-tests.yaml`), not via an independent rendered method. This
-case was left unspecified by a previous version of this renderer and was
-resolved by hand in `examples/`, which is exactly what this rule exists to
-prevent.
+`steps/c3-render-tests.yaml`), not via an independent rendered method. Same
+rule as `templates/renderers/gherkin.md`, which states the reasoning;
+`templates/BHV-template.md`'s rule 3 is the authority on the row itself.
 
 ## Mapping rules
 

@@ -443,13 +443,16 @@ three-tab wizard or a single scroll. `layout_tree` closes that, under exactly
 the discipline the rest of this section already imposes — abstracted
 vocabulary, raw tag as trace-back only, mechanical extraction, no LLM.
 
-**The tree.** One `layout_tree` per active `SCR` and per `TPL`, validating
-against `schemas/layout-tree.schema.json`. Every node is a container with a
-`container_kind` from a closed vocabulary — `stack`, `grid`, `tabs`,
-`accordion`, `wizard-steps`, `split`, `toolbar`, `dialog`, `region`, `table`,
-`custom` — carrying its label, its column count and declared column widths,
-its colspan/rowspan, whether it is collapsible and initially collapsed, which
-pane is initially selected, and its children **in document order**. Order is
+**The tree.** One `layout_tree` per active `SCR` and per `TPL`. Every node is
+a container with a `container_kind` from a closed vocabulary (`grid`, `tabs`,
+`accordion`, `wizard-steps`, `split`, `region`, …), carrying its label, its
+column count and declared column widths, its colspan/rowspan, whether it is
+collapsible and initially collapsed, which pane is initially selected, and its
+children **in document order**.
+
+**`schemas/layout-tree.schema.json` is the authority on the shape and on the
+closed vocabulary** — the enum lives there and nowhere else, so adding a
+container kind is one edit rather than three. Order is
 the layout fact; a generator that sorts children has destroyed the thing it
 was extracting. Leaves do not duplicate substance: a field leaf is a
 `field_id` pointing into the same screen's `form_fields`, a table leaf points
@@ -627,54 +630,28 @@ was never covered.
 
 ## Phase A exit gate — `a5-validate-inventory`
 
-A deterministic validator, run after every extraction pass, checks:
+A deterministic validator, run after every extraction pass. It runs these
+checks, and a graph failing any of them does not proceed to Phase B:
 
-1. Every edge's `from`/`to` resolve to a node with `status: "active"` in
-   `nodes.jsonl`.
-2. Every `legacy_refs` entry resolves to a real `file:line` (or, for `DB`
-   trigger/proc `body_ref`, a real DDL/SQL source location).
-3. No duplicate IDs.
-4. No node remains with `extraction_confidence: "ambiguous"` — every
-   ambiguous node has been routed through `a2`/`a3`/`a4` to a final
-   `"certain"` or `"rejected"` state.
-5. Every file type this application is known to contain (per Phase 0's
-   inventory of its own repo layout) was scanned at least once — e.g. if the
-   app has a `faces-config.xml`, at least one `NAV` or `CFG` node exists; if
-   it has a `web.xml` with `<security-constraint>` blocks, at least one
-   `AUTHZ` node exists.
-6. Every active `SCR` node's `raw_facts` includes `form_fields`,
-   `field_groups`, `data_tables` (possibly empty), `ajax_bindings` (possibly
-   empty), `converters_validators` (possibly empty), `labels` (possibly
-   empty), and `messages` (possibly empty) — not merely `form_fields` alone.
-   Every active `SVC` node's `public_methods` entries include `params`,
-   `return_type`, `action_bound`, and `nav_outcomes` (the last possibly
-   empty), and the node itself carries `constants` and `derivation_methods`
-   (either possibly empty). A node missing these is an incomplete skeleton
-   extraction, not a node with nothing to report.
-7. Every active `DB` node of `kind: "table"` has, on every column,
-   `precision`/`scale` (for numeric types), `length` (for string types),
-   `default`, `check_constraints`, and `value_domain` present — `null` is an
-   acceptable value for each, an absent key is not. The distinction is the
-   whole point: `null` records that the catalog had nothing to say, an
-   absent key records that the extractor did not look.
-8. Exactly one active `AUTHN` node exists for the application, with
-   `auth_method`, `declared_roles`, and `credential_store` set.
-9. Every `derivation_methods` entry on every active `SVC` node has a
-   corresponding lifted `RULE` node with a `DERIVED_FROM` edge back to it —
-   every flagged formula reached `a7`, none were flagged and forgotten.
-10. Every active `SCR` and `TPL` node has a `layout_tree` validating against
-    `schemas/layout-tree.schema.json`, and every active `SCR` has a
-    `layout_template` (whose `template_ref` may be `null`, but whose key may
-    not be absent — same `null`-versus-absent distinction as the value
-    facts). Every `field_id`, `table_id`, and `label_index` a tree references
-    resolves within its own node; every field in `form_fields` appears
-    exactly once in the tree; every `render_guard` resolves to an active
-    `EL`/`RULE` node; every `template_ref` and `include` leaf resolves to an
-    active `TPL` node with a matching `COMPOSES_INTO`/`INCLUDES` edge; and
-    every region a screen claims to fill exists in that template's own tree.
-11. Every active `SCR` node has a captured screen reference, or an entry in
-    `a8`'s report giving the reason it has none. Missing screenshots do not
-    block Phase A; a screen that is neither captured nor accounted for does.
+| Check | Answers |
+|---|---|
+| `edge_endpoints_resolve` | does every edge point at two live nodes |
+| `legacy_refs_resolve` | does every citation resolve to real source |
+| `no_duplicate_ids` | is every id unique among active nodes |
+| `no_remaining_ambiguous_nodes` | did every ambiguous node reach `a2`/`a3`/`a4` |
+| `known_file_types_scanned` | did any extractor silently no-op |
+| `structural_skeleton_complete` | is every screen and service skeleton whole |
+| `value_facts_complete` | is every value fact present, and every flagged formula lifted |
+| `layout_tree_complete` | does every screen have a layout, with every field placed once |
+| `screen_reference_captured` | is every screen photographed or accounted for |
+| `identity_model_present` | does the application state exactly one identity model |
 
-A graph that fails any of these does not proceed to Phase B. See
-`validators/README.md` for the full validator contract.
+**`validators/README.md` is the authority on what each check means** — what it
+reads, exactly what it asserts, its output shape, and what to do when it
+fails. This table is a pointer, deliberately: an earlier version of this
+document restated all ten in full, and the restatement drifted out of sync
+with both the validator contracts and `a5`'s own schema, which listed five
+checks against a nine-item list. One fact, one place, is the rule the spec
+pack is built on; it applies to this repository's own documentation too.
+
+`steps/a5-validate-inventory.yaml` is the authority on *when* the checks run.

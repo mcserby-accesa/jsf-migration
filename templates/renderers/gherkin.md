@@ -12,16 +12,17 @@ written to a configurable output directory (not fixed by this framework).
 
 ## Mapping rules
 
-**Rows with a non-empty `decision_table_ref` are not independently
-rendered as their own `Scenario`.** Per `templates/BHV-template.md`'s rule
-3, such a row's Given/When/Then is a plain-language summary of one row of a
-decision table whose own `Scenario Outline`/`Examples` (rule 3 below)
-already covers that exact condition combination — rendering the row a
-second time would duplicate, not add, coverage. This row is still
-accounted for by `c3`'s "no silent drops" validator via its
-`decision_table_ref` association, not via an independent `Scenario`. This
-case was previously unspecified, and was resolved inconsistently by hand in
-`examples/` as a result.
+**Rows with a non-empty `decision_table_ref` are not independently rendered
+as their own `Scenario`** — the table's own `Scenario Outline`/`Examples`
+(rule 3 below) already covers that condition combination. They are still
+accounted for by `c3`'s "no silent drops" validator, via the
+`decision_table_ref` association rather than an independent `Scenario`.
+
+`templates/BHV-template.md`'s rule 3 is the authority on why such a row
+exists and what it means; `templates/renderers/junit.md` applies the same
+rule to its own output. The case was previously unspecified in all three
+places and was resolved inconsistently by hand in `examples/` as a result,
+which is what a specified mapping is for.
 
 1. **Feature block**
    ```gherkin
