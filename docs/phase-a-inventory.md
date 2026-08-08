@@ -157,7 +157,7 @@ so they need graph *edges* for traceability, not an EL-style lift.
 | `CONTAINS` | `PROC` → `TASK` | A task/gateway belongs to a process |
 | `SCHEDULES` | `JOB` → `SVC` | A job invokes a service method |
 | `GUARDS` | `RULE` → `SCR`(component)/`NAV`/`TASK` | A lifted rule governs whether this element renders/is enabled/is taken |
-| `DERIVED_FROM` | `RULE` → `EL`/`TASK`/`DB`/`SVC` | Traceability from a lifted rule back to its raw source expression, DB trigger/procedure body (`a6`), or derivation method (`a7`) — see below |
+| `DERIVED_FROM` | `RULE` → `EL`/`TASK`/`DB`/`SVC` | Traceability from a lifted rule back to its raw source expression, DB trigger/procedure body, or derivation method (`a3`'s three source kinds) — see below |
 | `VALIDATED_BY` | `SCR`(component) → `SVC` | A component is checked by this custom `@FacesValidator` class |
 | `CONVERTED_BY` | `SCR`(component) → `SVC` | A component's value is converted by this custom `@FacesConverter` class |
 | `RESTRICTS` | `AUTHZ` → `SCR`/`SVC` | An authorization constraint gates access to this screen or method |
@@ -189,7 +189,7 @@ not how to implement it.
    `{name: <constant or field name, or null>, value, type, used_in: <method
    name>, legacy_refs}` — and `derivation_methods`, the list of methods that
    compute a value from domain fields without performing I/O, flagged for
-   `a7` to lift. Both are mechanical: "is this an integer literal in a
+   `a3` to lift. Both are mechanical: "is this an integer literal in a
    comparison" and "does this method body contain arithmetic and no call to
    a `READS`/`WRITES` target" are syntactic questions, not judgments.
    Candidate edges from static analysis (which cannot
@@ -313,7 +313,7 @@ not how to implement it.
    source often isn't in the app's own version control — flag this
    explicitly if the DDL source can't be resolved to a `legacy_refs`
    file:line; an unresolvable body_ref fails `a5`. Trigger/procedure bodies
-   are flagged for lifting the same way `EL` is — see `a6` below.
+   are flagged for lifting the same way `EL` is — see `a3-lift-rule` below.
 8. **Scheduler config scan** (`JOB` nodes): enumerate Quartz job
    definitions/triggers, `@Scheduled` annotated methods, or equivalent
    container timer config, producing one `JOB` node and one candidate
@@ -332,47 +332,62 @@ not how to implement it.
 
 ## LLM steps in Phase A
 
-Five judgment points exist in Phase A. Each is one bounded call over one
+Three judgment points exist in Phase A. Each is one bounded call over one
 item (`DECISIONS.md`, principle 4):
 
 - `a2-classify-ambiguous-node`: resolves a node the script couldn't classify
   with certainty (e.g. a `SCR` with no resolvable backing bean, or a
   candidate `SVC` that might actually be a cross-cutting utility rather than
   a screen-scoped service).
-- `a3-lift-el-expression`: turns one raw `EL`/`condition_expr` node into a
-  plain-language rule description and a candidate `RULE` node stub, with a
-  `DERIVED_FROM` edge back to the source.
+- `a3-lift-rule`: turns one piece of otherwise-lost logic into a
+  plain-language rule and a candidate `RULE` node stub, with a `DERIVED_FROM`
+  edge back to its source. Three source kinds, one mechanism — see "The three
+  lifts" below.
 - `a4-confirm-edge-inference`: resolves one candidate edge that static
   analysis couldn't pin to exactly one target (dynamic dispatch, DI
   interfaces, reflection).
-- `a6-lift-db-logic`: turns one DB trigger/stored-procedure body into a
-  plain-language rule description and a candidate `RULE` node stub, with a
-  `DERIVED_FROM` edge back to the `DB` node — the same mechanism as `a3`,
-  applied to the other place JaCoCo can't see (trigger/procedure
-  logic executes inside the DB engine, not the JVM, so it's exactly as
-  coverage-invisible as EL and needs the identical lift + no-`c4`-coverage
-  bookkeeping).
-- `a7-lift-computation`: turns one derivation method flagged by the Java AST
-  scan into an explicit formula and a candidate `RULE` node stub, with a
-  `DERIVED_FROM` edge back to the `SVC` node. Same mechanism as `a3`/`a6`,
-  applied to the place where logic *is* visible to JaCoCo but is not
-  recoverable from observing outcomes — see "Value facts" below.
 
-See `steps/a2-*.yaml`, `steps/a3-*.yaml`, `steps/a4-*.yaml`,
-`steps/a6-*.yaml`, `steps/a7-*.yaml` for exact contracts, `schemas/` for
-their output shapes, and `prompts/` for the prompt templates with few-shot
-examples.
+See `steps/a2-*.yaml`, `steps/a3-lift-rule.yaml`, `steps/a4-*.yaml` for exact
+contracts, `schemas/` for their output shapes, and `prompts/` for the prompt
+templates with few-shot examples.
 
 `a1`, `a5` and `a8` are script steps and appear here only for ordering: `a1`
 first, `a8` after it (it needs the `SCR` list), `a5` last (it needs `a8`'s
-report). The five judgment points above are per-item and order-free among
+report). The three judgment points above are per-item and order-free among
 themselves.
 
-Each of `a3`, `a6`, and `a7` may return `open_value_domain: true` on the
-rule it lifts, meaning the rule references a set the expression does not
-enumerate ("a SEPA country", "a supported currency"). That is not a lift
-failure — the lift is correct and the set genuinely is not in the source. It
-routes to the open-questions register (see "Value facts").
+## The three lifts
+
+`a3-lift-rule` runs over three kinds of source. The mechanism is identical
+each time — one item in, one plain-language rule and a `DERIVED_FROM` edge
+out, with the description constrained to identifiers literally present in the
+source — and the *reasons* the three exist are different. Those reasons are
+what the step's `source_kind` records, and they are worth keeping distinct
+even though the contract is one:
+
+| `source_kind` | Source | Why it must be lifted | `c4` coverage |
+|---|---|---|---|
+| `el` | A `rendered`/`disabled`/`required`/`value` EL expression, or a `TASK` gateway `condition_expr` | JaCoCo cannot see EL at all — it executes in the JSF lifecycle, appears in no coverage report, and without the lift the rule leaves no trace anywhere | none; only Phase D checks it |
+| `db-body` | A DB trigger or stored-procedure body | Same problem one step out: the logic runs inside the database engine rather than the JVM, so it is exactly as coverage-invisible | none |
+| `computation` | A derivation method the Java AST scan flagged | **Different reason.** This source *is* covered. Coverage proves the branch ran and never states the arithmetic, the operand order, the rounding mode, or which intermediate is deliberately unrounded | full — and that is the point |
+
+The third row is the one worth reading twice. Two of these lifts exist because
+a tool cannot see the code; the third exists because seeing it is not the same
+as recovering it. **Completeness is not recoverability** — and the `c4`
+coverage column is precisely why a merged step still records which kind it
+ran: an `el`-derived rule and a `computation`-derived rule carry different
+obligations downstream, and a reader of `nodes.jsonl` must be able to tell
+them apart.
+
+`computation` also produces four fields the other two don't — `formula`,
+`rounding_mode`, `scale`, `unrounded_intermediate` — required by the schema
+for that kind alone.
+
+Any kind may return `open_value_domain: true` on the rule it lifts, meaning
+the rule references a set the source does not enumerate ("a SEPA country", "a
+supported currency"). That is not a lift failure — the lift is correct and the
+set genuinely is not in the source. It routes to the open-questions register
+(see "Value facts").
 
 Everything else new in this document — `AUTHZ` and `TPL` nodes,
 `VALIDATED_BY`/`CONVERTED_BY`/`RESTRICTS`/`COMPOSES_INTO`/`INCLUDES` edges,
@@ -582,7 +597,7 @@ unconditionally:
 
 And one class of fact needs a lift rather than an extraction:
 
-**Formulas** (`a7-lift-computation`). A method that computes a value from
+**Formulas** (`a3-lift-rule`, `source_kind: computation`). A method that computes a value from
 domain fields — a line total, a VAT-inclusive gross, a proration, a due date
 — is ordinary JVM bytecode, so `c4`'s coverage oracle sees it and the
 framework's completeness argument holds. But completeness is not the same as

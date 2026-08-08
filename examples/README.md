@@ -13,7 +13,7 @@ Files, in the order they'd be produced by the pipeline:
 
 1. `inventory-excerpt/nodes.jsonl`, `inventory-excerpt/edges.jsonl` — the
    Phase A graph slice this behavior was drafted from (output shape of `a1`,
-   after `a2`/`a3`/`a4`/`a7` resolved the ambiguous cases and lifted the
+   after `a2`/`a3`/`a4` resolved the ambiguous cases and lifted the
    expressions — see `docs/phase-a-inventory.md`). Worth reading for the
    value facts specifically: `DB-0044`'s `STATUS` column carries its
    enumerated `value_domain` and `WORKING_DAYS` its `scale: 1`, `SVC-0089`

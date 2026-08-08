@@ -224,7 +224,7 @@ behavior: numeric precision and scale, string length, defaults, check
 constraints, and each column's enumerated value domain where one is knowable
 (`docs/phase-a-inventory.md`, "Value facts"). Also triggers and stored
 procedures with pointers to their source. Trigger and procedure *logic* is
-not here — it was lifted into `RULE` nodes by `a6` and appears in whichever
+not here — it was lifted into `RULE` nodes by `a3-lift-rule` and appears in whichever
 behavior covers it, because it is business logic that happens to live in the
 database.
 

@@ -8,7 +8,8 @@ description: >
   application's repo layout was scanned at least once, that every structural
   skeleton, layout tree and value fact is present, that the application has
   an AUTHN node, that every active screen was either captured or accounted
-  for by a8, and that every flagged derivation method reached a7's lift. See
+  for by a8, and that every flagged derivation method reached a3's computation
+  lift. See
   docs/phase-a-inventory.md, "Phase A exit gate".
 input:
   type: full_graph
@@ -32,4 +33,4 @@ notes: >
 
   a5 needs a8's capture report as well as the graph, so a8 runs between a1
   and a5. That ordering is the only Phase A sequencing constraint beyond
-  "a1 first": a2/a3/a4/a6/a7 are per-item and order-free among themselves.
+  "a1 first": a2/a3/a4 are per-item and order-free among themselves.

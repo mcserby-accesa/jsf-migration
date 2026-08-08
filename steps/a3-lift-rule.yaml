@@ -1,0 +1,129 @@
+id: a3-lift-rule
+phase: A
+kind: llm
+description: >
+  Turn ONE piece of logic the pack would otherwise lose into a plain-language
+  rule description and a candidate RULE node stub, with a DERIVED_FROM edge
+  back to its source. Three source kinds, one mechanism — see source_kind
+  below, and docs/phase-a-inventory.md, "The three lifts".
+
+  This step replaces the former a3-lift-el-expression, a6-lift-db-logic and
+  a7-lift-computation, which were three near-identical contracts for what
+  those same documents already called "the same mechanism". The step ids a6
+  and a7 are RETIRED and are never reused — same discipline as inventory node
+  ids, and for the same reason: an id that reappears meaning something else
+  silently invalidates every external reference to the first thing.
+source_kind:
+  description: >
+    Which of the three the item is. Set by the ORCHESTRATOR from the source
+    node's kind — it is a lookup, not a judgment, and this step never decides
+    it. It selects the input fields, the source-specific validators, and which
+    few-shot block the prompt carries (prompts/a3-lift-rule.md).
+  values:
+    el: >
+      One raw EL node — a rendered/disabled/required/value expression — or a
+      TASK node with a non-empty condition_expr. Lifted because JaCoCo cannot
+      see EL at all: a view-layer condition executes in the JSF lifecycle and
+      appears in no coverage report, so without this the rule leaves no trace
+      anywhere in the pack.
+    db-body: >
+      One DB trigger or stored-procedure body. Lifted for the same reason
+      one step out: the logic executes inside the database engine rather than
+      the JVM, making it exactly as coverage-invisible as EL.
+    computation: >
+      One derivation method the Java AST scan flagged — a method computing a
+      value from domain fields without I/O. Lifted for a DIFFERENT reason, and
+      the difference is the point: this source IS visible to the coverage
+      oracle. Coverage proves the branch ran; it never states the arithmetic,
+      the operand order, the rounding mode, or which intermediate is
+      deliberately left unrounded. Completeness is not recoverability.
+input:
+  type: single_node
+  bound: exactly one expression / body / method per call, for every source_kind
+  source:
+    el: nodes.jsonl, kind == "el", or TASK nodes with a non-empty condition_expr
+    db-body: nodes.jsonl, kind == "db" with raw_facts.kind in ["trigger", "stored_procedure"]
+    computation: nodes.jsonl, kind == "service", one entry of raw_facts.derivation_methods
+  fields:
+    common: [source_kind, source_node_id]
+    el: [attribute, raw_expression, attached_component_id, attached_screen]
+    db-body: [name, kind, body_ref, body_text]
+    computation: [method_name, signature, method_body, referenced_fields, column_facts]
+  note: >
+    body_text and method_body are NOT stored in nodes.jsonl — only the
+    legacy_refs/body_ref pointer is (trigger and procedure source often is not
+    in the app's own repo). The orchestrator resolves the pointer into text at
+    call time, the same way it resolves any other legacy_refs pointer before
+    handing content to a prompt.
+
+    column_facts (computation only) is the precision/scale/value_domain of
+    every DB column the referenced fields map to. Supplied because a formula's
+    rounding behavior is only interpretable against the exactness of the
+    values it operates on, and the extractor already has those facts.
+prompt: prompts/a3-lift-rule.md
+output_schema: schemas/a3-lift-rule.schema.json
+validators:
+  common:
+    - source_node_id in the response exists in nodes.jsonl, and its prefix
+      matches source_kind (EL/TASK for el, DB for db-body, SVC for computation)
+    - the rule description references only identifiers present in the supplied
+      source text — no invented conditions. This is the validator that makes a
+      lift a lift rather than a paraphrase, and it is identical across all
+      three kinds; only the vocabulary it checks against differs
+    - a DERIVED_FROM edge from the new RULE id to the source node id is present
+    - confidence field present and in [0,1]
+  computation:
+    - the named method exists in the owning SVC node's public_methods or
+      derivation_methods
+    - every identifier in the formula resolves to a parameter, field, or
+      constant present in method_body
+    - rounding_mode and scale are either both stated or both explicitly null;
+      a formula that rounds without saying how is not a lifted formula
+escalate:
+  trigger: 3 consecutive schema-validation failures, OR confidence < 0.5 twice
+  action: >
+    retry once with more of the surrounding source, then log the escalation
+    event. What "more" means is the one thing that differs per kind:
+      el          — the attached screen's full form_fields list
+      db-body     — the full body_text rather than an excerpt, plus the
+                    table's column list, plus the body of any function the
+                    body calls
+      computation — the full bodies of every method this one calls (a formula
+                    delegating to a helper cannot be stated from the caller
+                    alone), plus the owning class's constants
+idempotent: true
+resumable: true
+notes: >
+  Output RULE nodes are candidates. They enter nodes.jsonl with
+  extraction_confidence "certain" — the lift needs no second confirmation
+  pass, because the schema already requires the description to be traceable to
+  the literal source — but they are not claimed by any behavior until Phase B
+  links them via a GUARDS/COVERS edge.
+
+  Coverage bookkeeping, which differs by kind and is why the kinds are worth
+  distinguishing even inside one step:
+
+  - el and db-body produce RULE nodes with NO c4 branch-coverage path. c4
+    measures JVM bytecode branches; neither an EL expression nor a trigger
+    body ever executes as JVM bytecode. That is an accepted, documented blind
+    spot which this lift compensates for — not a gap c4 is expected to close.
+    Phase D's browser-driven validation is the only thing that checks an
+    el-derived rule against the running system.
+  - computation produces RULE nodes whose source c4 DOES cover. Nothing about
+    the coverage story changes; what the lift adds is the formula the coverage
+    does not state.
+
+  Every flagged derivation method must reach this step: a5's exit gate checks
+  that each derivation_methods entry has a corresponding lifted RULE, so a
+  method flagged and then skipped blocks Phase A rather than silently shipping
+  a formula-shaped hole.
+
+  A formula whose result feeds a column with a scale the formula itself does
+  not round to is not an error here — it is the finding. Emit it as lifted,
+  with unrounded_intermediate set, so the mismatch reaches the pack as a
+  stated fact rather than as an ORM's silent default at implementation time.
+
+  Any kind may return open_value_domain: true, meaning the rule tests
+  membership of a set the source never enumerates. That is not a lift failure
+  — the lift is correct and the set genuinely is not there. It seeds an
+  open-questions entry.

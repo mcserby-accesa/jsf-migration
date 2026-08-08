@@ -158,9 +158,10 @@ pipeline is proven on your application.
 specifies exactly what each one must produce — node types, edge types,
 required fields, extraction rules. Build to that specification.
 
-**6. Run the pipeline.** Work through `steps/` in order: `a1`→`a8`, then
-`b1`→`b5`, then `c1`→`c9`. Each `steps/*.yaml` names its input, its output
-schema, its validators, and what happens on failure.
+**6. Run the pipeline.** Work through `steps/` in the order the files
+declare: Phase A is `a1`, `a2`/`a3`/`a4` (per-item, any order), `a8`, then
+`a5`; then `b1`–`b5`; then `c1`–`c9`. Each `steps/*.yaml` names its input, its
+output schema, its validators, and what happens on failure.
 
 **7. Hand over the spec pack.** `c9` assembles it and runs the completeness
 gate. If that gate fails, the pack is not ready — fix the step that owns the
@@ -179,7 +180,7 @@ against unchanged input does no work twice.
 | **Behavior** (`BHV-####`) | The unit of specification: something a user or system observes, not a class |
 | **Node / edge** | An item in the legacy graph (screen, service, rule, table…) and a relationship between two |
 | **Seam** | The layer tests attach to — direct method calls (`service`), HTTP (`rest`), or a browser (`ui`) |
-| **Lift** | Turning a raw expression (an EL condition, a trigger body, a computation) into a plain-language rule |
+| **Lift** | Turning something a coverage tool can't see or can't recover — an EL condition, a trigger body, a computation — into an explicit plain-language rule (`a3-lift-rule`) |
 | **Value fact** | Something no scenario recovers: a column's scale, an enum's members, a constant, a formula's rounding mode, a screen's literal wording |
 | **Layout tree** | A screen's container nesting in document order — grids, tabs, panels — with the rule that conditions each container's rendering |
 | **Wireframe** | The layout tree drawn as fixed-width text, so a page can be read at a glance and diffed across re-runs |

@@ -118,9 +118,11 @@ component is extracted as a raw `EL` node and then *lifted* by one LLM call
 into a plain-language rule description, becoming a candidate `RULE`
 node. This is the mechanism that keeps view-layer logic from disappearing
 from the spec. Database trigger and procedure bodies get the same treatment
-(`a6`), for the same reason.
+for the same reason — the same `a3-lift-rule` step, with
+`source_kind: db-body`.
 
-Computation methods get it too (`a7`), for a different reason worth stating
+Computation methods get it too (`source_kind: computation`), for a different
+reason worth stating
 separately: a formula *is* visible to JaCoCo, and coverage still doesn't
 recover it. Knowing every branch of `total()` ran says nothing about the
 operand order, the rounding mode, or which intermediate is deliberately left

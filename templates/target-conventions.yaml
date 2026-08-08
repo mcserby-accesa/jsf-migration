@@ -340,7 +340,7 @@ process:
   #                     being a rewiring list and becomes the reimplementation
   #                     work list — every service task, listener and gateway
   #                     condition in it is something you must now write and
-  #                     test yourself, including the gateway conditions a6/a3
+  #                     test yourself, including the gateway conditions a3
   #                     lifted into RULE nodes.
   bpmn_disposition: run-as-shipped
 

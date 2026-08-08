@@ -1,0 +1,102 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "a3-lift-rule.schema.json",
+  "title": "a3-lift-rule output",
+  "description": "One lifted rule, from any of the three source kinds. Replaces the former a3-lift-el-expression, a6-lift-db-logic and a7-lift-computation schemas, which differed only in the source id pattern, the vocabulary referenced_properties is drawn from, and the four fields a computation adds. source_kind discriminates; the conditional blocks below are what the three schemas actually disagreed about.",
+  "type": "object",
+  "required": ["source_kind", "source_node_id", "rule_node", "derived_from_edge", "confidence"],
+  "additionalProperties": false,
+
+  "allOf": [
+    {
+      "if": { "properties": { "source_kind": { "const": "el" } }, "required": ["source_kind"] },
+      "then": { "properties": { "source_node_id": { "pattern": "^(EL|TASK)-[0-9]{4,}$" } } }
+    },
+    {
+      "if": { "properties": { "source_kind": { "const": "db-body" } }, "required": ["source_kind"] },
+      "then": { "properties": { "source_node_id": { "pattern": "^DB-[0-9]{4,}$" } } }
+    },
+    {
+      "if": { "properties": { "source_kind": { "const": "computation" } }, "required": ["source_kind"] },
+      "then": {
+        "required": ["source_kind", "source_node_id", "method_name", "rule_node", "derived_from_edge", "confidence"],
+        "properties": {
+          "source_node_id": { "pattern": "^SVC-[0-9]{4,}$" },
+          "rule_node": {
+            "required": ["proposed_id", "kind", "label", "plain_language_description", "formula", "rounding_mode", "scale", "referenced_properties"]
+          }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "source_kind": { "enum": ["el", "db-body"] } }, "required": ["source_kind"] },
+      "then": { "not": { "required": ["method_name"] } }
+    }
+  ],
+
+  "properties": {
+    "source_kind": {
+      "type": "string",
+      "enum": ["el", "db-body", "computation"],
+      "description": "Which lift this is. Supplied in the input by the orchestrator (a lookup on the source node's kind, never a judgment) and echoed back so the output is self-describing — a lifted rule read out of context must still say what kind of source it came from, because the coverage bookkeeping differs: el and db-body have no c4 coverage path, computation does."
+    },
+    "source_node_id": { "type": "string" },
+    "method_name": {
+      "type": "string",
+      "minLength": 1,
+      "description": "computation only, and required there — a SVC node has many methods and the edge alone does not say which one was lifted. Must be absent for el and db-body."
+    },
+    "rule_node": {
+      "type": "object",
+      "required": ["proposed_id", "kind", "label", "plain_language_description", "referenced_properties"],
+      "additionalProperties": false,
+      "properties": {
+        "proposed_id": { "type": "string", "pattern": "^RULE-[0-9]{4,}$" },
+        "kind": { "const": "rule" },
+        "label": { "type": "string", "minLength": 1 },
+        "plain_language_description": { "type": "string", "minLength": 1 },
+        "referenced_properties": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Identifiers literally present in the supplied source, and nothing else — this is what makes the output a lift rather than a paraphrase. The vocabulary differs by source_kind: property/method names for el, table/column/parameter names for db-body, parameter/field/constant names for computation."
+        },
+        "formula": {
+          "type": "string",
+          "minLength": 1,
+          "description": "computation only, and required there. The computation stated explicitly in identifiers present in the method body — e.g. 'quantity * unitPrice * (1 + vatRate)'. Not simplified, reordered, or normalized: multiplication order and where a rounding call sits are load-bearing facts, not formatting. This is the field that exists because a passing acceptance scenario constrains a formula without stating it."
+        },
+        "rounding_mode": {
+          "type": ["string", "null"],
+          "description": "computation only. The rounding applied to the result, verbatim from the source (HALF_UP, FLOOR, ...), or null when the computation does not round. Null means 'this formula does not round', never 'unknown' — an unknowable rounding mode is a confidence < 0.5 escalation, not a null."
+        },
+        "scale": {
+          "type": ["integer", "null"],
+          "description": "computation only. Decimal places the result is rounded to; null when rounding_mode is null. Stated or null together with rounding_mode — a formula that rounds without saying to what is not a lifted formula."
+        },
+        "unrounded_intermediate": {
+          "type": "boolean",
+          "default": false,
+          "description": "computation only. True when this result is consumed elsewhere at full precision, or when it feeds a column whose scale differs from this formula's. Recorded because that mismatch is exactly the kind of fact that survives every acceptance scenario and then changes the answer in production."
+        }
+      }
+    },
+    "derived_from_edge": {
+      "type": "object",
+      "required": ["from", "to", "type"],
+      "additionalProperties": false,
+      "properties": {
+        "from": { "type": "string", "pattern": "^RULE-[0-9]{4,}$" },
+        "to": { "type": "string", "description": "The source node id. Same value as source_node_id; carried here too because this object is written into edges.jsonl verbatim." },
+        "type": { "const": "DERIVED_FROM" }
+      }
+    },
+    "open_value_domain": {
+      "type": "boolean",
+      "default": false,
+      "description": "True when the lifted rule references a set the source does not enumerate — a role list, a status vocabulary, a lookup table's rows, a rate table, a supported-currency roster. Not a lift failure: the lift is correct and the set is genuinely absent from the source. Seeds an open-questions entry so the implementer answers a stated question rather than inventing the set. See docs/spec-pack.md.",
+      "$comment": "Applies to all three source kinds. The three predecessor schemas each declared this separately with a kind-specific example list; the mechanism was always identical."
+    },
+    "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+    "needs_escalation": { "type": "boolean", "default": false }
+  }
+}

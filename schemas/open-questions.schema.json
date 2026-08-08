@@ -14,7 +14,7 @@
     },
     "raised_by": {
       "type": "string",
-      "description": "The step whose output seeded this entry (a1, a3, a6, a7, c7, c7b, c8, c9), or 'implementer' for one appended after handover."
+      "description": "The step whose output seeded this entry (a1, a3, c7, c7b, c8, c9), or 'implementer' for one appended after handover."
     },
     "subject": {
       "type": "array",

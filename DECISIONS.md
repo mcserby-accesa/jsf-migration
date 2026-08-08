@@ -247,7 +247,7 @@ step refuses to run without the file rather than guessing. This also keeps
 the scope line clean — the framework consumes an architecture decision, it
 does not make one.
 
-Trigger/stored-procedure logic remains handled via `a6-lift-db-logic` in
+Trigger/stored-procedure logic remains handled via the `db-body` lift in
 Phase A: the same lift mechanism as EL, since trigger and procedure bodies
 execute inside the DB engine and are equally invisible to JaCoCo.
 
@@ -304,7 +304,7 @@ navigation outcome becomes — moved into `target-conventions.yaml`, where the
 framework's existing rule already puts target-architecture decisions: a
 human-authored input, applied mechanically, never inferred.
 
-**4. Value facts are extracted; formulas are lifted (`a7`).** The deepest
+**4. Value facts are extracted; formulas are lifted.** The deepest
 hole. Extraction captured structure and never values: a `BigDecimal` column
 with no scale (an ORM's silent default then rounded away the precision a
 scenario existed to test), a status column whose enum members were never
@@ -313,7 +313,8 @@ figures, a panel's wording that reached the pack only as a paraphrase.
 Each is now extracted unconditionally, with `null` and absent kept
 distinct — `null` means the catalog had nothing to say, which is a finding.
 
-Formulas needed a lift rather than an extraction, and `a7` is the one lift
+Formulas needed a lift rather than an extraction, and the computation lift
+is the one
 whose source *is* visible to the coverage oracle. That exception is
 deliberate and worth stating precisely: the other lifts exist because JaCoCo
 cannot see EL or a trigger body, while this one exists because coverage
@@ -470,7 +471,7 @@ against the captured screenshots, not a validator.
 Two changes with one shape, both prompted by the same observation: the pilot's
 implementing agent **deleted the process engine.** It reimplemented the
 orchestration by hand, which left the `.bpmn` files the pack ships
-byte-identically as decoration, and the gateway conditions `a3`/`a6` lifted
+byte-identically as decoration, and the gateway conditions `a3-lift-rule` lifted
 into `RULE` nodes to be rediscovered one at a time.
 
 This is the layout failure again, and it is worth naming the pattern rather
@@ -537,6 +538,52 @@ No security *product* is recommended, and that asymmetry with the engine
 recommendation is deliberate: variance across identity stacks is far higher,
 and no artifact in the pack becomes invalid depending on the choice, which is
 precisely what earns the engine its recommendation.
+
+## Settled: the three lifts are one step (2026-08-08)
+
+`a3-lift-el-expression`, `a6-lift-db-logic` and `a7-lift-computation` were
+three near-identical contracts — three step files, three schemas, three
+prompts, 3,756 words, and eleven files needing an edit to change the lift
+contract. This document and `docs/phase-a-inventory.md` had described them as
+"the same mechanism" from the day the second one was written. They are now one
+step, `a3-lift-rule`, discriminated by `source_kind`: `el` | `db-body` |
+`computation`.
+
+The three schemas differed in exactly three things: the `source_node_id`
+pattern, one sentence describing which vocabulary `referenced_properties` is
+drawn from, and the four fields a computation adds (`formula`,
+`rounding_mode`, `scale`, `unrounded_intermediate`) plus `method_name`. Those
+are now conditional blocks on `source_kind`, which is a better statement of
+the truth than three files were: the disagreements are visible in one place
+instead of implied by three copies.
+
+**What this does not change — and the objection worth answering.** Principle 4
+bounds a *call*, not a step count. Each call still takes one expression, one
+body, or one method and makes one judgment. The prompt is where that could
+have been lost, so it is stated as a requirement in
+`prompts/a3-lift-rule.md`: the orchestrator includes the shared preamble plus
+exactly ONE kind block, so a call lifting an EL expression never carries the
+computation examples. A runner that concatenates all three has undone the
+property that lets a cheap model run the step, and the prompt says so.
+
+**What was genuinely at risk, and how it is kept.** Three separate steps made
+it obvious at a glance that there are exactly three places the pack would
+otherwise lose logic, and that they exist for **two different reasons** —
+`el` and `db-body` because a coverage tool cannot see the code at all,
+`computation` because seeing it is not the same as recovering it.
+`source_kind` collapsing that into an enum was the real cost of merging. It is
+paid off by making the distinction explicit rather than structural:
+`docs/phase-a-inventory.md` gains a "The three lifts" table stating each
+kind's reason and its `c4` coverage status, and the merged step carries the
+per-kind coverage bookkeeping in its notes. The output also echoes
+`source_kind` back, so a `RULE` node read out of context still says which kind
+of source it came from — which matters, because an `el`-derived rule has no
+`c4` coverage path and a `computation`-derived one does.
+
+**`a6` and `a7` are retired step ids and are never reused.** Same discipline
+as inventory node ids, for the same reason: an id that reappears meaning
+something else silently invalidates every external reference to the first
+thing.
 
 ## Settled: explicitly out of scope
 

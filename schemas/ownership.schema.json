@@ -46,7 +46,7 @@
           "derived_facts": {
             "type": "array",
             "items": { "type": "string" },
-            "description": "For a RULE node lifted by a3/a6/a7: the formula or rule statement the owner implements. Present so a reusing behavior can tell whether the thing it needs already exists, without opening the owner's code."
+            "description": "For a RULE node lifted by a3-lift-rule: the formula or rule statement the owner implements. Present so a reusing behavior can tell whether the thing it needs already exists, without opening the owner's code."
           }
         }
       }

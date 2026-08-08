@@ -21,8 +21,8 @@ output_schema: schemas/a1-extract-inventory.schema.json
 validators:
   - every emitted node has a non-empty id matching '^[A-Z]+-[0-9]{4,}$'
   - every emitted node's prefix is one of SCR, SVC, PROC, TASK, JOB, NAV, DB,
-    EL, CFG, AUTHZ, AUTHN, TPL (RULE nodes are never emitted by a1 — see a3,
-    a6, a7 and b1/b2)
+    EL, CFG, AUTHZ, AUTHN, TPL (RULE nodes are never emitted by a1 — see
+    a3-lift-rule and b1/b2)
   - value_facts_complete — see validators/README.md. DB column precision,
     scale, length, default, check_constraints and value_domain keys present
     on every table column; converter/validator attributes present; SCR labels
