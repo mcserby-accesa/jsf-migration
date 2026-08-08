@@ -3,15 +3,19 @@
   "$id": "c8-resolve-unmapped-endpoint.schema.json",
   "title": "c8-resolve-unmapped-endpoint output",
   "type": "object",
-  "required": ["svc_id", "method_name", "resolution"],
+  "required": ["source_node_id", "resolution"],
   "additionalProperties": false,
   "properties": {
-    "svc_id": { "type": "string", "pattern": "^SVC-[0-9]{4,}$" },
-    "method_name": { "type": "string" },
+    "source_node_id": {
+      "type": "string",
+      "pattern": "^(SVC|SCR|NAV|RULE)-[0-9]{4,}$",
+      "description": "The surface item c7 could not decide. Not only service methods: a screen whose row source could not be resolved, or a navigation rule whose target is computed, reaches this step the same way."
+    },
+    "method_name": { "type": "string", "description": "Present only when source_node_id is an SVC node." },
     "resolution": {
       "type": "string",
-      "enum": ["mapped", "no_endpoint", "needs_human_contract"],
-      "description": "mapped: an operation was produced. no_endpoint: this method legitimately has no HTTP surface (internal helper reached only by another service). needs_human_contract: could not be decided — blocks c9's gate rather than shipping a guess."
+      "enum": ["mapped", "no_endpoint", "client_side_only", "needs_human_contract"],
+      "description": "mapped: an operation was produced. no_endpoint: this legitimately has no HTTP surface (an internal helper reached only by another service). client_side_only: the replacement needs no server round-trip for it — the usual answer for a navigation rule or a display-only condition. needs_human_contract: could not be decided, and blocks c9's gate rather than shipping a guess."
     },
     "operation": {
       "type": "object",
@@ -40,6 +44,10 @@
     },
     {
       "if": { "properties": { "resolution": { "const": "no_endpoint" } }, "required": ["resolution"] },
+      "then": { "required": ["reasoning"] }
+    },
+    {
+      "if": { "properties": { "resolution": { "const": "client_side_only" } }, "required": ["resolution"] },
       "then": { "required": ["reasoning"] }
     }
   ]

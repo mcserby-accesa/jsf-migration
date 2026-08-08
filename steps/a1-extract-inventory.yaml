@@ -4,7 +4,8 @@ kind: script
 description: >
   Run every deterministic extractor (Java AST scan, view/bean pair scan,
   EL expression scan, faces-config.xml parse, BPMN XML parse, DB catalog
-  introspection, scheduler config scan — see docs/phase-a-inventory.md) and
+  introspection, scheduler config scan, layout and template scan — see
+  docs/phase-a-inventory.md) and
   append their output to nodes.jsonl / edges.jsonl, then load both into the
   query engine named by framework.yaml:graph_store. No LLM call in this
   step; every node is written with extraction_confidence "certain" or
@@ -19,8 +20,21 @@ input:
 output_schema: schemas/a1-extract-inventory.schema.json
 validators:
   - every emitted node has a non-empty id matching '^[A-Z]+-[0-9]{4,}$'
-  - every emitted node's prefix is one of SCR, SVC, PROC, TASK, JOB, NAV, DB, EL, CFG
-    (RULE nodes are never emitted by a1 — see a3 and b1/b2)
+  - every emitted node's prefix is one of SCR, SVC, PROC, TASK, JOB, NAV, DB,
+    EL, CFG, AUTHZ, AUTHN, TPL (RULE nodes are never emitted by a1 — see a3,
+    a6, a7 and b1/b2)
+  - value_facts_complete — see validators/README.md. DB column precision,
+    scale, length, default, check_constraints and value_domain keys present
+    on every table column; converter/validator attributes present; SCR labels
+    and messages present; SVC constants and derivation_methods present
+  - layout_tree_complete — see validators/README.md. Every active SCR and TPL
+    carries a layout_tree validating against schemas/layout-tree.schema.json;
+    every SCR carries a layout_template key; every form_fields entry appears
+    exactly once as a leaf; every render_guard, template_ref and region_name
+    resolves. a1 is the ONLY producer of layout_tree — no later step refines
+    it, because two producers of one fact is the failure the pack's
+    original/projection rule exists to prevent
+  - exactly one AUTHN node is emitted for the application
   - re-running against an unchanged repo snapshot produces a byte-identical
     nodes.jsonl / edges.jsonl (modulo append-only ordering)
   - graph_store load step does not mutate nodes.jsonl / edges.jsonl

@@ -1,0 +1,61 @@
+id: a8-capture-screen-references
+phase: A
+kind: script
+description: >
+  Drive the booted Phase-0 application and capture one screenshot per active
+  SCR node, plus one per significant state that screen has (a
+  validation-failure state, a role-dependent variant, an initially-collapsed
+  panel expanded). Writes reference/screenshots/ and an index. Captures what
+  the application rendered; interprets nothing. See
+  docs/phase-a-inventory.md, "Visual reference".
+
+  This is the only Phase A step that needs the application RUNNING rather
+  than readable, which is why it is a step of its own rather than part of
+  a1's DOM walk. Run it after a1 (it needs the SCR node list) and before a5.
+input:
+  type: full_graph + booted_application
+  source: >
+    nodes.jsonl (every active SCR node and its view_path), the booted legacy
+    application from the Phase 0 gate, and the seeded accounts implied by the
+    AUTHN node's declared_roles for role-dependent states
+  bound: not applicable (deterministic capture over every active SCR; not an
+    LLM call)
+output_schema: schemas/a8-capture-screen-references.schema.json
+validators:
+  - screen_reference_captured — see validators/README.md. Every active SCR
+    has at least one capture, or an entry in not_captured stating why
+  - every capture's screen_id resolves to an active SCR node
+  - every capture file exists at the recorded path and its sha256 matches
+  - re-running against an unchanged application and unchanged seed data
+    produces the same capture list (the same screens, states, and paths).
+    Byte-identical IMAGES are explicitly NOT required — see notes
+escalate:
+  trigger: not applicable (script step)
+  action: >
+    a screen that cannot be reached in the seeded environment is recorded in
+    not_captured with a reason, not retried differently and not skipped
+    silently. An empty not_captured on an application with unreachable
+    screens is the failure this step is shaped to prevent
+idempotent: true
+resumable: true
+notes: >
+  Nothing downstream reads a screenshot. No gate parses one, no projection
+  derives from one, and the spec pack's completeness gate checks only that
+  the index is consistent with what was captured. A consumer that cannot
+  read images loses nothing the pack asserts — that property is deliberate
+  and must not be eroded by later steps starting to depend on these files.
+
+  Byte-identical re-capture is not required and must not be validated for.
+  Antialiasing, font hinting, and cursor state vary between runs of the same
+  browser on the same page; requiring hash stability would make a reference
+  artifact fail a gate for a reason that has nothing to do with the
+  application. What must be stable is the capture LIST — same screens, same
+  state names, same paths — because that is what the index and the manifest
+  record.
+
+  Data warning: a capture of a sanitized production snapshot contains
+  whatever that snapshot contains, and it leaves the environment with the
+  pack. Capture against synthetic fixtures, or scrub, before handover. The
+  framework states this rather than enforcing it: it has no way to inspect
+  an image, and a check it cannot actually perform would be worse than a
+  stated constraint.

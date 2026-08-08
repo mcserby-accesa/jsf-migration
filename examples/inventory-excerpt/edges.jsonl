@@ -1,7 +1,13 @@
 {"from": "SCR-0142", "to": "SVC-0089", "type": "RENDERS", "evidence": "leave/detail.xhtml:1 managed-bean binding to leaveRequestBean", "extraction_confidence": "certain"}
+{"from": "SCR-0142", "to": "TPL-0003", "type": "COMPOSES_INTO", "evidence": "leave/detail.xhtml:3 ui:composition template=/WEB-INF/templates/main.xhtml", "extraction_confidence": "certain"}
+{"from": "SCR-0150", "to": "TPL-0003", "type": "COMPOSES_INTO", "evidence": "leave/confirmation.xhtml:3 ui:composition template=/WEB-INF/templates/main.xhtml", "extraction_confidence": "certain"}
 {"from": "NAV-0022", "to": "SCR-0150", "type": "NAVIGATES_TO", "evidence": "faces-config.xml:88-96 navigation-case to-view-id=/leave/confirmation.xhtml", "extraction_confidence": "certain"}
-{"from": "RULE-0031", "to": "SCR-0142", "type": "GUARDS", "evidence": "leave/detail.xhtml:142 rendered attribute on approveButtonPanel", "extraction_confidence": "certain"}
+{"from": "RULE-0031", "to": "SCR-0142", "type": "GUARDS", "evidence": "leave/detail.xhtml:142 rendered attribute on approveButtonPanel (SCR-0142 layout node LT-3)", "extraction_confidence": "certain"}
 {"from": "RULE-0031", "to": "EL-0089", "type": "DERIVED_FROM", "evidence": "a3-lift-el-expression output for EL-0089", "extraction_confidence": "certain"}
+{"from": "RULE-0052", "to": "SCR-0142", "type": "GUARDS", "evidence": "leave/detail.xhtml:94 rendered attribute on entitlementPanel (SCR-0142 layout node LT-2)", "extraction_confidence": "certain"}
+{"from": "RULE-0052", "to": "EL-0090", "type": "DERIVED_FROM", "evidence": "a3-lift-el-expression output for EL-0090", "extraction_confidence": "certain"}
+{"from": "RULE-0044", "to": "SVC-0089", "type": "DERIVED_FROM", "evidence": "a7-lift-computation output for LeaveRequestBean.getWorkingDays", "extraction_confidence": "certain"}
+{"from": "SVC-0089", "to": "DB-0044", "type": "WRITES", "evidence": "src/main/java/com/acme/leave/LeaveRequestBean.java:120 persist(LeaveRequest)", "extraction_confidence": "certain"}
 {"from": "BHV-0142", "to": "SCR-0142", "type": "COVERS", "evidence": "b4-write-behavior-spec confirmed boundary", "extraction_confidence": "certain"}
 {"from": "BHV-0142", "to": "SVC-0089", "type": "COVERS", "evidence": "b4-write-behavior-spec confirmed boundary", "extraction_confidence": "certain"}
 {"from": "BHV-0142", "to": "NAV-0022", "type": "COVERS", "evidence": "b4-write-behavior-spec confirmed boundary", "extraction_confidence": "certain"}

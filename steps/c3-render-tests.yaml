@@ -27,6 +27,13 @@ validators:
     and the renderers resolved it inconsistently by hand)
   - if spec_format is "both", gherkin and junit outputs reference the same
     set of source AC ids
+  - every emitted step, title, and Examples/@CsvSource cell passes text
+    normalization (templates/renderers/gherkin.md, "Text normalization") —
+    Markdown emphasis stripped, newlines collapsed, delimiters escaped
+  - every scenario title and test-method name carries its scenario_id, so
+    uniqueness holds by construction rather than by luck
+  - the Feature description is emitted as comment lines, never as free text
+    that a parser could read as a stray step declaration
 escalate:
   trigger: not applicable
   action: >
@@ -37,3 +44,10 @@ idempotent: true
 resumable: true
 notes: >
   spec_format is consumed ONLY here — see framework.yaml's boundary comment.
+
+  This step's validators check that the renderer applied its own rules.
+  Whether the resulting file actually LOADS under a real parser is a
+  different claim, and it is c3b's — see
+  steps/c3b-verify-rendered-artifacts.yaml. Determinism and loadability were
+  conflated in an earlier version, which meant the framework proved the
+  first and shipped the second unchecked.

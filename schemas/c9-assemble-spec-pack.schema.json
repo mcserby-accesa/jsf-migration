@@ -3,7 +3,7 @@
   "$id": "c9-assemble-spec-pack.schema.json",
   "title": "c9-assemble-spec-pack report (also the pack's manifest.json)",
   "type": "object",
-  "required": ["status", "pack_root", "source_engine", "conventions_hash", "parts", "checks"],
+  "required": ["status", "pack_root", "source_engine", "conventions_hash", "ui_conventions_hash", "parts", "checks"],
   "additionalProperties": false,
   "properties": {
     "status": { "type": "string", "enum": ["pass", "fail"] },
@@ -16,7 +16,16 @@
       "type": "string",
       "description": "Hash of the api-conventions.yaml the API contract was derived from."
     },
+    "ui_conventions_hash": {
+      "type": ["string", "null"],
+      "description": "Hash of the ui-conventions.yaml carried into handover/, or null when the application authored none. Required as a KEY, like every other place this pack distinguishes null from absent: null states that the layout-to-target mapping was not recorded, which is a finding an implementer should see; an absent key states that this step did not look. Unlike conventions_hash, nothing derives from it — see steps/c9-assemble-spec-pack.yaml, carried_inputs."
+    },
     "behavior_count": { "type": "integer", "minimum": 0 },
+    "open_questions_seeded": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "How many open-questions entries this assembly seeded. Reported rather than gated: a pack with none is not a better pack, it is usually a pack whose upstream steps stopped recording what they could not decide."
+    },
     "parts": {
       "type": "array",
       "items": {
@@ -37,8 +46,8 @@
           "path": { "type": "string", "description": "Relative to pack_root." },
           "kind": {
             "type": "string",
-            "enum": ["original", "projection", "derived", "verbatim_copy", "generated_index", "mutable_seed"],
-            "description": "original: the only place this content exists. projection: regenerated from an original, must regenerate byte-identically. derived: computed once from originals plus a human input (the API contract). verbatim_copy: byte-identical to a legacy source file (.bpmn). generated_index: manifest and README. mutable_seed: created empty and thereafter owned by the implementer (progress.jsonl) — excluded from hashing and regeneration checks."
+            "enum": ["original", "projection", "derived", "verbatim_copy", "generated_index", "mutable_seed", "seeded_append_only", "reference", "carried_input"],
+            "description": "original: the only place this content exists. projection: regenerated from an original, must regenerate byte-identically. derived: computed once from originals plus a human input (the API contract). verbatim_copy: byte-identical to a legacy source file (.bpmn). generated_index: manifest and README. mutable_seed: created empty and thereafter owned by the implementer (progress.jsonl) — excluded from hashing and regeneration checks. seeded_append_only: written non-empty by the pipeline and appended to by the implementer afterwards (open-questions.jsonl) — its sha256 records the seeded content at handover, and later divergence is expected rather than a failure, so it is excluded from the regeneration check. reference: a captured artifact nothing in the pack derives from or checks against (reference/screenshots/) — its sha256 is tamper-evidence at handover, and re-running the capture is NOT expected to reproduce it, so it is excluded from the regeneration check. carried_input: a human-authored input file copied in verbatim for the implementer (handover/ui-conventions.yaml)."
           },
           "source": {
             "type": "string",
@@ -65,7 +74,18 @@
               "endpoint_contract_complete",
               "inventory_coverage_complete",
               "no_legacy_source_in_pack",
-              "dependency_order_derivable"
+              "dependency_order_derivable",
+              "rendered_artifacts_parse",
+              "rendered_scenario_titles_unique",
+              "step_text_is_plain_text",
+              "step_index_complete",
+              "scenario_surface_bound",
+              "value_facts_complete",
+              "layout_tree_complete",
+              "wireframe_renders_for_every_screen",
+              "screen_reference_captured",
+              "identity_model_present",
+              "open_questions_well_formed"
             ]
           },
           "passed": { "type": "boolean" },

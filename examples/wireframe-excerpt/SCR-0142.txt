@@ -1,0 +1,19 @@
+SCR-0142 — Leave Request Detail
+template: TPL-0003 (fills: content)
+source: leave/detail.xhtml
+
+Requests covering more than 20 consecutive days need HR approval.
+┌─ Dates (2 cols) ─────────────────────────────────────────────────────────────────────────────────┐
+│ Start date  [date           *]                  │ End date    [date          *]                  │
+│ Half day    [boolean-toggle    ]                                                                 │
+└──────────────────────────────────────────────────────────────────────────────────────────────────┘
+┌─ Entitlement [-] (when RULE-0052) ───────────────────────────────────────────────────────────────┐
+│ Working days  [display-only      ]                                                               │
+└──────────────────────────────────────────────────────────────────────────────────────────────────┘
+┌─ (toolbar) (when RULE-0031) ─────────────────────────────────────────────────────────────────────┐
+│ [ Approve ]  [ Reject ]                                                                          │
+└──────────────────────────────────────────────────────────────────────────────────────────────────┘
+
+legend
+  LT-2    render_guard RULE-0052 — The entitlement panel is shown only for annual leave.
+  LT-3    render_guard RULE-0031 — The approval panel is shown only when the leave request's status~

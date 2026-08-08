@@ -1,0 +1,75 @@
+id: c7b-bind-scenarios-to-surface
+phase: C
+kind: llm
+description: >
+  For one behavior, bind every scenario to the surface at which the target
+  system can observe it: a REST operation from c7/c8, a client-side effect,
+  a domain-internal computation with no client-visible equivalent, or
+  nothing observable at all. The binding does not restate the scenario and
+  does not change it — it answers only "where does this become checkable in
+  a system that has no pages," which every implementer otherwise answers
+  privately, per behavior, with no record.
+input:
+  type: single_behavior
+  source: >
+    one BHV-####.md's scenarios + that behavior's covered nodes + the c7/c8
+    operations whose source_node_id is among them + c7's client_side_only
+    verdicts + api-conventions.yaml's auth_semantics and
+    navigation_semantics
+  fields: [bhv_id, scenarios, covered_nodes, candidate_operations,
+    client_side_only, translation_policy]
+  bound: exactly one behavior per call
+prompt: prompts/c7b-bind-scenarios-to-surface.md
+output_schema: schemas/c7b-bind-scenarios-to-surface.schema.json
+validators:
+  - every scenario_id in the behavior appears exactly once in the output
+  - a binding with surface "rest" names an operation_id present in
+    candidate_operations — never a path this step composed itself
+  - a binding with surface "client-side" or "domain-only" carries a
+    non-empty rationale
+  - no binding invents a status code, path, or response shape — any such
+    detail is copied from the named operation's fragment or from
+    api_conventions.auth_semantics
+escalate:
+  trigger: 3 consecutive schema-validation failures, OR a scenario bound
+    "not-observable" with confidence below 0.5
+  action: >
+    retry with the full openapi_fragment of every candidate operation, plus
+    the covered nodes' structural skeletons; log the escalation event. A
+    scenario that still binds "not-observable" is not an error — it is
+    seeded into the open-questions register, which is where a scenario with
+    no target equivalent belongs
+idempotent: true
+resumable: true
+notes: >
+  This step exists because a legacy scenario's Given/When/Then is written in
+  the legacy system's own terms, and a large share of them have no literal
+  equivalent in a JSON API with no server-rendered pages. "The login page is
+  served inline at HTTP 200." "The browser navigates to /logout via a plain
+  href." "getAmount() returns the unrounded figure" — each is a true,
+  well-evidenced statement about the legacy system, and each requires a
+  decision before it can be checked against a replacement.
+
+  Those decisions were previously made at implementation time, one behavior
+  at a time, by whoever got there first — which is the same fragmentation
+  the API contract exists to prevent for endpoint shape (docs/spec-pack.md,
+  "The API contract"). Making them here, once, against the derived contract
+  and the application's stated translation policy, costs one bounded call
+  per behavior and produces a pack that answers the question instead of
+  raising it.
+
+  What this step must NOT do: change what a scenario asserts. A binding of
+  "rest, operation X, 401" for a scenario whose legacy Then is "the login
+  page is redisplayed" records how that outcome is observed in the target;
+  it does not license rewriting the scenario, which remains a statement
+  about the legacy system and is still run against the legacy system by c4.
+  If the target's observable outcome cannot preserve the legacy one's
+  meaning, the correct output is surface "not-observable" with a rationale —
+  an honest open question, not a quietly weakened assertion.
+
+  The binding is deliberately NOT written into the BHV-####.md. The BHV
+  describes the legacy application; a target-side observation surface is
+  derived from the API contract and changes when the conventions change.
+  Keeping it in its own projection preserves the pack's one-fact-one-place
+  rule (docs/spec-pack.md) and means re-deriving the API does not rewrite
+  fifty canonical behavior documents.

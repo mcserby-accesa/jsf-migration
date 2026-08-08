@@ -121,10 +121,10 @@ pilot can correct them.
   and still blocked on having one. See REVIEW.md P0-1.
 - **Structural skeletons close the "how does an agent implement a page/
   service" gap without breaking principle 5.** Phase A extracts a
-  page skeleton per `SCR` (field groups, abstracted widget kinds, data-table
-  columns/pagination, ajax wiring, converter/validator references — never
-  the raw JSF tag, only an abstracted `component_kind` plus a
-  `legacy_component` trace-back field) and a service skeleton per `SVC`
+  page skeleton per `SCR` (field groups, the layout tree, abstracted widget
+  kinds, data-table columns/pagination, ajax wiring, converter/validator
+  references — never the raw JSF tag, only an abstracted `component_kind`
+  plus a `legacy_component` trace-back field) and a service skeleton per `SVC`
   (method signatures, action-binding, scope, nav-outcome mapping) —
   extraction is unconditional and mechanical, same discipline as `EL`→`RULE`
   or `faces-config.xml`→`NAV`. See `docs/phase-a-inventory.md`, "Structural
@@ -141,7 +141,13 @@ pilot can correct them.
   shipping it in the spec pack; whether the rebuild preserves or redesigns
   that structure is the adopting team's decision, and not one this framework
   has standing to check. Nothing upstream changes — extraction was always
-  unconditional and cheap regardless of the answer.
+  unconditional and cheap regardless of the answer. **This does not license
+  extracting less.** "We don't check whether the rebuild matched" was read
+  once as "we needn't state what it should match," which is how the layout
+  gap happened; the two are unrelated. The adopting team records what it
+  intends in `ui-conventions.yaml` (`layout_intent`), and nothing verifies
+  that either — it is written down so a reviewer knows which differences
+  were the plan.
 - IDs are stable and global: `SCR-####`, `SVC-####`, `BHV-####`, etc. All
   linking between documents is by ID, never by path or name.
 - Parameters in `framework.yaml` are each consumed at exactly one boundary
@@ -244,6 +250,220 @@ Trigger/stored-procedure logic (D10) remains closed via `a6-lift-db-logic` in
 Phase A: the same lift mechanism as EL, since trigger and procedure bodies
 execute inside the DB engine and are equally invisible to JaCoCo.
 
+## Settled: six changes from the first pilot's gap analysis (2026-08-08)
+
+The framework was run end to end for the first time, against a fixture
+application, and the implementing side kept a numbered log of everything the
+spec pack did not answer well enough to build without guessing. Thirty-six
+entries. They are not thirty-six problems: they cluster into six, and five of
+the six were fixable inside the framework's existing scope.
+
+The value of that log is that it distinguishes *judgment calls the framework
+correctly left open* from *facts the framework simply failed to carry*. Only
+the second kind is fixed here. Where a genuine decision remains — which
+credential store, which SEPA roster — the change is that the pack now asks
+the question instead of leaving it to be discovered.
+
+**1. Rendered artifacts are verified to load (`c3b`).** `c3` guaranteed that
+the same behavior renders to the same bytes, and nothing checked that those
+bytes parse. Six of the log's entries were rendered-artifact defects:
+duplicate scenario titles (two scenarios legitimately sharing a
+precondition, with the title derived from it), Markdown emphasis from the
+canonical `.md` surviving into a step the harness compiles into a regular
+expression, a Feature description whose first word was "When". Each fails
+the whole file before any assertion runs, and each was silent until someone
+ran it — after handover. The renderers now normalize text and prefix every
+title with its `scenario_id`; `c3b` parses the output with a real parser and
+checks what a parser won't. See `templates/renderers/*.md` and
+`docs/phase-c-acceptance.md`, step 3b.
+
+**2. Shared step text is indexed, not eliminated
+(`behaviors/step-index.json`).** Cucumber-family harnesses match step text
+globally, so two behaviors both beginning "a signed-in user" share one
+definition — correct behavior, and the reason step text is *not* namespaced
+per behavior. The defect is that the sharing was invisible until a second
+definition was written and the registry threw, with both behaviors finished
+and one needing to be unpicked. The pack now ships the index and names one
+owner per shared text. The same problem one level up produced
+`behaviors/ownership.json`: `order.json` said what could be started, never
+who owns a node three behaviors cover.
+
+**3. Every scenario is bound to a target-observable surface (`c7b`), and the
+API contract covers the whole client-visible surface.** Eight entries were
+the same act of translation, performed ad hoc once per behavior: a legacy
+`Then` describing a served page, an `href` navigation, or a domain-object
+call has no equivalent in a JSON API, so the implementer invented one.
+`c7` derived operations from `SVC` methods only, which left every screen,
+navigation rule, and display converter with no endpoint and no recorded
+verdict. Both are fixed: `c7` now records a verdict for `SCR` and `NAV`
+nodes too (an operation, or `client_side_only`, or unmapped), and `c7b`
+binds each scenario to where the target observes it. The page-semantics
+translation policy itself — what an unauthenticated call returns, what a
+navigation outcome becomes — moved into `api-conventions.yaml`, where the
+framework's existing rule already puts target-architecture decisions: a
+human-authored input, applied mechanically, never inferred.
+
+**4. Value facts are extracted; formulas are lifted (`a7`).** The deepest
+hole. Extraction captured structure and never values: a `BigDecimal` column
+with no scale (an ORM's silent default then rounded away the precision a
+scenario existed to test), a status column whose enum members were never
+enumerated, a converter recorded without its locale, four hardcoded budget
+figures, a panel's wording that reached the pack only as a paraphrase.
+Each is now extracted unconditionally, with `null` and absent kept
+distinct — `null` means the catalog had nothing to say, which is a finding.
+
+Formulas needed a lift rather than an extraction, and `a7` is the one lift
+whose source *is* visible to the coverage oracle. That exception is
+deliberate and worth stating precisely: the other lifts exist because JaCoCo
+cannot see EL or a trigger body, while this one exists because coverage
+proves a branch ran without stating what it computed. The pilot's own log
+shows the consequence — the line-total/VAT/rounding formula was derived by
+whichever group reached it first, then flagged for the others to reuse
+rather than re-derive. Completeness is not recoverability.
+
+**5. The pack ships an identity model.** The single largest invented
+artifact in the log was an entire user/role entity, because
+`auth/constraints.json` said who may reach what and nothing said who exists.
+The credentials genuinely were not in the legacy repository — they were the
+container's realm — and the extractors correctly found nothing. The failure
+is that "found nothing" and "there is nothing to find" read identically to
+whoever opens the pack. The new `AUTHN` node states the absence positively,
+with the realm, the role vocabulary, and the authentication mechanism; the
+gap becomes a stated question with an authored answer in
+`api-conventions.yaml`'s `target_identity`.
+
+**6. Open questions are a register, not a discovery
+(`triage/open-questions.jsonl`).** The pilot invented its own gap log, its
+own numbering discipline, and its own "never invent scope" rule, because the
+pack had nowhere to put a specification gap — `triage-log.jsonl` covers
+uncovered *branches*. It is now a pack original, seeded mechanically from
+states upstream steps already record, append-only, with ids assigned once.
+Two smaller changes belong to the same cluster: scenario `origin` gained
+`legacy-defect` with a required `disposition` (a scenario documenting a bug
+the migration fixes is unrepresentable as `legacy | new`, and the pilot hit
+that shape twice), and `data/fixture-order.json` derives the FK-safe seed
+order the pack already had the facts for.
+
+**What was deliberately not fixed.** Three entries were target-harness
+bootstrap — a test client's cookie handling, a missing Surefire include, a
+TestBed teardown colliding with a BDD library. No spec-pack change prevents
+them, and pulling them in would breach the implementation-out-of-scope line
+above. If they are worth covering, the vehicle is a separate runnable
+conformance harness that consumes a pack and proves its rendered artifacts
+execute — outside this repository, and a decision to take explicitly rather
+than let leak in.
+
+Two of the six are worth re-reading as a single lesson: the framework was
+strong at proving its output *complete* and weak at making it *usable*. A
+spec pack can satisfy every completeness gate here and still hand its reader
+a file that won't parse, a formula they must re-derive, and a question
+nobody wrote down.
+
+## Settled: layout is structure, and the pack must carry it (2026-08-08)
+
+The second thing the pilot's implementing side reported, after the six
+clusters above, was blunter: **the rebuilt application had no layout.** Not a
+degraded layout — none. Every screen came out as a flat sequence of labelled
+inputs, because that is exactly what the pack described.
+
+The pack was not wrong about anything. It was silent, and the silence was
+this document's doing. "Visual fidelity" was listed out of scope, and
+`docs/phase-a-inventory.md` folded layout into it: `field_groups` was
+specified as "a group label + ordered field-id list — never the raw
+`h:panelGrid`/`p:panel` tag." Everything structural about the arrangement
+went out with the styling. Whether eighteen fields sat in two columns or
+stacked; whether a screen was a three-tab wizard or one long scroll; which
+panel disappeared when a status changed; and — most quietly — the fact that
+almost no JSF view is a whole page, because the banner, the menu, and the
+footer live in a template the view composes into and the extraction never
+looked at templates at all.
+
+**The correction is not that visual fidelity is now in scope.** It stays out,
+and for the same reason as before: spacing, colour, typography, and theme are
+target-design decisions, and in a PrimeFaces-style application most of them
+are not in the application's own source to extract. What was wrong is that
+*layout* was filed under them. Containment, order, and conditionality are
+structural facts about the legacy application, mechanically readable from the
+view sources, and no more a target-architecture decision than a data table's
+page size — which this document already requires be extracted, for exactly
+the argument that applies here.
+
+Four things change, in one layered structure. The layering is the design, not
+an accident of what was easy:
+
+**1. `layout_tree` — normative.** One container tree per active `SCR` and
+per the new `TPL` node, produced by the same DOM walk that already produces
+`form_fields`, validated by `schemas/layout-tree.schema.json` and gated by
+`layout_tree_complete`. Closed abstracted vocabulary (`grid`, `tabs`,
+`accordion`, `wizard-steps`, `split`, `toolbar`, `region`, …), raw tag as
+trace-back only, children in document order, and a `render_guard` naming the
+`EL`/`RULE` that conditions each container. Leaves point into `form_fields` /
+`data_tables` / `labels` rather than restating them: the tree states
+position, those arrays state substance. No new LLM judgment — the same
+argument that carried D14 and the structural skeletons.
+
+`TPL` nodes and the `COMPOSES_INTO`/`INCLUDES` edges come with it, and so
+does the application's navigation menu, which existed nowhere in the graph:
+`NAV` nodes cover outcome-driven navigation from `faces-config.xml`, which is
+a different mechanism and not how a user actually reaches a screen.
+
+**2. Wireframes — a projection.** `views/wireframes/SCR-####.txt`, rendered
+from `views/pages.json` by the deterministic mapping in
+`templates/renderers/wireframe.md`, checked by
+`projection_regenerates_identically` like everything else. It holds no fact
+the tree doesn't. It exists because a nested JSON tree carries the layout
+correctly and buries it, for a human reviewer and a text-reading agent alike
+— and because a reviewer who can see the page in two seconds will actually
+check the extraction, where one who must reassemble it mentally will not.
+
+**3. Screenshots — a non-normative reference.** `a8-capture-screen-references`
+drives the booted Phase-0 application and captures each screen as it
+rendered. Nothing derives from an image, no gate parses one, and a consumer
+that ignores them loses nothing the pack asserts. This is the load-bearing
+property of the whole layering: if dropping the screenshots left an
+implementer unable to build a page, the defect would be in `layout_tree`.
+What they carry is what the framework deliberately does not extract —
+density, proportion, visual weight — plus the only practical way to catch a
+tree that resolved a dynamic composition wrongly.
+
+**4. `ui-conventions.yaml` — a carried input, and deliberately weaker than
+`api-conventions.yaml`.** Worth stating precisely, because the symmetry is
+tempting and false. `api-conventions.yaml` is an input to a derivation: `c7`
+reads it and refuses to run without it. Nothing reads `ui-conventions.yaml`;
+`c9` copies it into `handover/` and hashes it, and a pack without one passes
+every gate. The reason to ship it anyway is the reason the endpoint contract
+exists — the mapping from a `tabs` container to a target component gets
+decided either way, and decided per-screen by whoever arrives first it
+produces three different ideas of a form section. The difference is that here
+the framework can record the decision and cannot apply it, because applying
+it is implementation.
+
+**What was considered and rejected: shipping HTML + CSS.** The obvious fix is
+to translate each `.xhtml` into plain HTML and CSS and let the implementer
+convert that to Angular. It was rejected on four grounds. Nothing could
+validate it — every other artifact in the pack has a schema and a gate, and a
+blob of markup would be the only unfalsifiable file in it. Producing it means
+a model reading `.xhtml` and making design calls, which is the unaudited
+channel principle 5 closes, relocated rather than removed. It is two lossy
+hops (xhtml → HTML/CSS → Angular) through an intermediate that is neither the
+source nor the target and bakes in structural decisions nobody chose. And in
+a component-library application the visual weight lives in the library's
+theme, not the repository, so most of what the CSS would be reproducing was
+never the application's to begin with — while the implementer will be using a
+different component library regardless.
+
+**One producer, stated because it is easy to erode.** `layout_tree` is
+written by `a1` and by nothing else. Extracting it from the *rendered* DOM
+would be better evidence in one respect — the composition is already
+resolved — and is rejected because a screen renders differently per role and
+per row of seed data, so a DOM-sourced tree would be one observation
+presented as the structure, and because `a1` must stay runnable against a
+source tree alone. A second step refining `a1`'s tree from runtime
+observation would give the pack two copies of one fact and nothing to say
+which is authoritative. The cost is real: a statically-resolved tree can be
+wrong about a dynamic composition, and catching that is a review activity
+against the captured screenshots, not a validator.
+
 ## Settled: explicitly out of scope
 
 - **Building the target application.** The spec pack is the handoff; what
@@ -254,8 +474,16 @@ execute inside the DB engine and are equally invisible to JaCoCo.
   it.
 - **Migrating the data.** Moving legacy rows into the new schema is real,
   necessary work, but it is an ETL runbook, not a specification.
-- **Visual fidelity.** The pack states that a screen has these fields, in
-  this grouping, with this widget kind. It does not state what it looks like.
+- **Visual fidelity.** The pack states a screen's containment, order, widget
+  kinds, and conditionality, and ships a captured image of how that rendered.
+  It does not state spacing, colour, typography, or density as facts, does
+  not extract them, and asserts nothing about them. **Layout is not covered
+  by this line** — see the layout entry above, which exists because an
+  earlier version of this bullet was read as covering it and a rebuild
+  shipped with no layout at all.
+- **Checking that a rebuild matched.** Extraction accuracy is this
+  framework's obligation; resemblance is not, and no validator here attempts
+  it. See "Structural fidelity is the implementer's call."
 - **Any analysis of a specific application** — no app-specific extractor
   logic, no worked example beyond one illustrative `BHV`.
 - **Implementing any parser, validator, renderer, or orchestrator.** Every
@@ -271,7 +499,7 @@ a pilot and correct here.
 |---|---|---|---|
 | 1 | Exact hop-bound for "one behavior's local subgraph" when drafting a behavior boundary | 2 hops from the seed screen/process node, hard cap; anything larger is pre-split mechanically before the LLM sees it | `steps/b3-draft-behavior-boundary.yaml` |
 | 2 | Escalation retry count before a step is treated as failing | 3 consecutive schema/confidence failures | each `steps/*.yaml` `escalate:` block |
-| 3 | Node ID prefixes beyond the three given (`SCR`, `SVC`, `BHV`) | Added `RULE`, `PROC`, `TASK`, `JOB`, `NAV`, `DB`, `EL` — see `docs/phase-a-inventory.md` | inventory schema |
+| 3 | Node ID prefixes beyond the three given (`SCR`, `SVC`, `BHV`) | Added `RULE`, `PROC`, `TASK`, `JOB`, `NAV`, `DB`, `EL`, `CFG`, `AUTHZ`, `AUTHN`, `TPL` — see `docs/phase-a-inventory.md` | inventory schema |
 | 4 | Default `combinatorial_reducer` | `pict` (freely available, Microsoft-licensed, wide precedent) over `acts` | `framework.yaml` |
 | 5 | Default `spec_format` | `gherkin` — more legible to non-engineers reviewing behavior specs during triage; `junit` and `both` remain first-class options. **`framework.yaml` corrected 2026-08-07** to actually default to `gherkin`; it previously defaulted to `both`, contradicting this row (REVIEW.md D7) | `framework.yaml` |
 | 6 | Default `bpmn_source_engine`/`bpmn_target_engine` | Both left as `camunda7` placeholders. Engine continuity is a checked Phase 0 precondition, and stays one even with implementation out of scope: the spec pack ships the `.bpmn` files byte-identically, which is only a valid deliverable if the target engine can execute them | `framework.yaml`, `docs/phase-0-environment.md`, `docs/spec-pack.md` |

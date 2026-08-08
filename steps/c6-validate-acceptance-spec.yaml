@@ -3,13 +3,17 @@ phase: C
 kind: script
 description: >
   Deterministic exit gate for Phase C on one behavior: legacy_refs
-  resolution on every AC/decision-table row, rendered-output existence and
-  idempotence for every configured spec_format, zero unresolved triage-log
-  entries for this behavior, and every unreachable_defensive entry has a
-  non-empty justification. See docs/phase-c-acceptance.md, step 6.
+  resolution on every AC/decision-table row, rendered-output existence,
+  idempotence and loadability for every configured spec_format, a surface
+  binding for every scenario, a disposition on every legacy-defect scenario,
+  zero unresolved triage-log entries for this behavior, and every
+  unreachable_defensive entry has a non-empty justification. See
+  docs/phase-c-acceptance.md, step 6.
 input:
   type: single_behavior
-  source: one BHV-####.md + its rendered output + the application's triage log
+  source: >
+    one BHV-####.md + its rendered output + c3b's verification report for it
+    + c7b's bindings for it + the application's triage log
   bound: not applicable (deterministic validator, not an LLM step)
 output_schema: schemas/c6-validate-acceptance-spec.schema.json
 validators:

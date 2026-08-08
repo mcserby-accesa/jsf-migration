@@ -2,20 +2,23 @@ id: c7-derive-endpoint-contracts
 phase: C
 kind: script
 description: >
-  Mechanically derive one OpenAPI operation fragment per public method on
-  every active SVC node, from the service skeleton plus the application's
-  api-conventions.yaml. Resource name, path, verb, parameters, request and
-  response schemas, status codes and security are all computed by rule —
-  nothing is judged here. Any method the rules cannot decide outright is
-  emitted with mapped: false and a reason, and routed to c8; it is never
-  guessed at by this step.
+  Mechanically derive OpenAPI operation fragments from the legacy surface
+  plus the application's api-conventions.yaml: one per public method on
+  every active SVC node, one read operation per active SCR node, and one
+  verdict per active NAV node and per EL-derived RULE. Resource name, path,
+  verb, parameters, request and response schemas, status codes and security
+  are all computed by rule — nothing is judged here. Anything the rules
+  cannot decide outright is emitted with mapped: false and a reason, and
+  routed to c8; it is never guessed at by this step.
 input:
   type: all_service_nodes
   source: >
     nodes.jsonl (active SVC nodes with public_methods, active DB nodes with
-    columns, active SCR nodes' data_tables for pagination defaults, active
-    AUTHZ nodes for role requirements) + the application's api-conventions.yaml
-  fields: [svc_nodes, db_nodes, scr_data_tables, authz_nodes, api_conventions]
+    columns, active SCR nodes with form_fields/data_tables, active NAV nodes,
+    EL-derived RULE nodes, active AUTHZ nodes for role requirements, the
+    AUTHN node) + the application's api-conventions.yaml
+  fields: [svc_nodes, db_nodes, scr_nodes, nav_nodes, el_rule_nodes,
+    authz_nodes, authn_node, api_conventions]
   bound: not applicable (deterministic script over the whole graph)
 output_schema: schemas/c7-derive-endpoint-contracts.schema.json
 validators:
@@ -33,6 +36,17 @@ validators:
     api_conventions.carry_legacy_roles is true; never inferred
   - every SVC method appears exactly once in the output, either as a mapped
     operation or as an unmapped entry with a reason
+  - every active SCR node appears exactly once, either as a read operation
+    serving that screen's fields and tables, or as an unmapped entry with a
+    reason — a screen with no operation is a screen the client cannot render
+  - every active NAV node and every EL-derived RULE appears exactly once,
+    each with a verdict — an operation, or client_side_only, or unmapped
+    with a reason. A navigation rule usually becomes a client route rather than
+    an endpoint; recording that verdict is what distinguishes "decided" from
+    "not looked at"
+  - the authentication operations required by api_conventions.auth_semantics
+    are emitted when the AUTHN node's auth_method is not "none", with their
+    paths and status codes taken from that section — never invented here
 escalate:
   trigger: not applicable
   action: >
@@ -50,3 +64,21 @@ notes: >
 
   The output is fragments, not a merged document — merging is c9's, so that
   re-deriving one service does not rewrite the whole OpenAPI file.
+
+  Why SCR and NAV nodes are in scope here, when an earlier version derived
+  from SVC methods alone: a legacy JSF application's client-visible surface
+  is not the union of its service methods. A screen that renders from bean
+  properties with no service call behind it, a navigation menu, a converter
+  that formats a value for display — none of these is a public service
+  method, and all of them are things the replacement's client has to fetch
+  from somewhere. Deriving only from SVC left exactly those to be invented
+  at implementation time, one endpoint per implementer, with nothing in the
+  pack to make two of them agree. That is the failure mode the API contract
+  exists to remove (docs/spec-pack.md, "The API contract"), so the contract
+  has to cover the whole surface, not the part that happened to be shaped
+  like a service.
+
+  A verdict of client_side_only is a real answer, not a gap: it says the
+  replacement needs no server round-trip for this, which is the fact an
+  implementer otherwise has to decide alone.
+

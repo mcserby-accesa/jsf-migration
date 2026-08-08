@@ -3,7 +3,7 @@
   "$id": "c7-derive-endpoint-contracts.schema.json",
   "title": "c7-derive-endpoint-contracts output",
   "type": "object",
-  "required": ["conventions_hash", "operations", "unmapped"],
+  "required": ["conventions_hash", "operations", "unmapped", "client_side_only"],
   "additionalProperties": false,
   "properties": {
     "conventions_hash": {
@@ -16,24 +16,44 @@
     },
     "unmapped": {
       "type": "array",
-      "description": "Methods the rules could not decide. Each is routed to c8. Never guessed at here.",
+      "description": "Surface items the rules could not decide. Each is routed to c8. Never guessed at here.",
       "items": {
         "type": "object",
-        "required": ["svc_id", "method_name", "reason"],
+        "required": ["source_node_id", "reason"],
         "additionalProperties": false,
         "properties": {
-          "svc_id": { "type": "string", "pattern": "^SVC-[0-9]{4,}$" },
-          "method_name": { "type": "string" },
+          "source_node_id": { "type": "string", "pattern": "^(SVC|SCR|NAV|RULE)-[0-9]{4,}$" },
+          "method_name": { "type": "string", "description": "Present only when source_node_id is an SVC node." },
           "reason": {
             "type": "string",
             "enum": [
               "no_verb_prefix_match",
               "not_crud_shaped",
               "ambiguous_resource",
-              "unresolvable_type"
+              "unresolvable_type",
+              "no_resolvable_row_source",
+              "no_client_visible_effect"
             ]
           },
           "detail": { "type": "string" }
+        }
+      }
+    },
+    "client_side_only": {
+      "type": "array",
+      "description": "NAV nodes and EL-derived RULEs the rules decided need no server round-trip in the target — a navigation outcome that becomes a client route, a rendered-condition that the client evaluates from data it already holds. This is a decision, not a gap: it is what stops each implementer from deciding it privately and differently. Every such item still appears here so that 'decided' is distinguishable from 'never considered'.",
+      "items": {
+        "type": "object",
+        "required": ["source_node_id", "rationale"],
+        "additionalProperties": false,
+        "properties": {
+          "source_node_id": { "type": "string", "pattern": "^(NAV|RULE|SCR)-[0-9]{4,}$" },
+          "rationale": { "type": "string", "minLength": 1 },
+          "target_route": {
+            "type": "string",
+            "description": "For a NAV node: the client route the legacy navigation outcome maps to, per api_conventions.navigation_semantics."
+          },
+          "legacy_refs": { "type": "array", "items": { "type": "string" } }
         }
       }
     }
@@ -41,11 +61,20 @@
   "definitions": {
     "operation": {
       "type": "object",
-      "required": ["svc_id", "method_name", "path", "verb", "derivation", "openapi_fragment"],
+      "required": ["operation_id", "source_node_id", "path", "verb", "derivation", "openapi_fragment"],
       "additionalProperties": false,
       "properties": {
-        "svc_id": { "type": "string", "pattern": "^SVC-[0-9]{4,}$" },
-        "method_name": { "type": "string" },
+        "operation_id": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Stable identifier for this operation, unique across the pack. Scenario bindings (c7b) reference it, so it must not change when unrelated operations are re-derived."
+        },
+        "source_node_id": {
+          "type": "string",
+          "pattern": "^(SVC|SCR|NAV|AUTHN)-[0-9]{4,}$",
+          "description": "The legacy node this operation serves. SVC: a service method. SCR: a screen's read operation, supplying the fields and tables that screen renders. NAV: a navigation rule that needed a server round-trip rather than a client route. AUTHN: an authentication operation required by api_conventions.auth_semantics."
+        },
+        "method_name": { "type": "string", "description": "Present only when source_node_id is an SVC node." },
         "path": { "type": "string", "pattern": "^/" },
         "verb": { "type": "string", "enum": ["get", "post", "put", "patch", "delete"] },
         "derivation": {
@@ -73,13 +102,13 @@
         "roles": {
           "type": "array",
           "items": { "type": "string" },
-          "description": "Copied verbatim from AUTHZ nodes restricting this SVC, when carry_legacy_roles is true. Never inferred."
+          "description": "Copied verbatim from the AUTHZ nodes restricting this operation's source node, when carry_legacy_roles is true. Never inferred."
         },
         "legacy_refs": {
           "type": "array",
           "minItems": 1,
           "items": { "type": "string" },
-          "description": "The service method this operation was derived from. An operation with no legacy_refs is invented, not derived."
+          "description": "The legacy surface this operation was derived from. An operation with no legacy_refs is invented, not derived."
         },
         "openapi_fragment": {
           "type": "object",

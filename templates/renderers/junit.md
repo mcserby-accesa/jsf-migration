@@ -34,7 +34,10 @@ which is exactly what this rule exists to prevent.
    class BHV####<PascalTitle>Test {
    ```
 2. **Given/When/Then row (empty `decision_table_ref`) → one `@Test` method**,
-   named `<scenario_id>_<short slug of Then>`:
+   named `<scenario_id with '-' replaced by '_'>_<short slug of Then>` — the
+   `scenario_id` leads, so two scenarios with similar assertions cannot
+   produce the same method name, and a truncated console summary still
+   identifies which scenario it belongs to:
    - The method body's structure depends on `legacy_test_seam`:
      - `rest`: arrange request payload/headers from `Given`, perform the
        call implied by `When` via the configured REST client seam, assert
@@ -58,6 +61,24 @@ which is exactly what this rule exists to prevent.
    distinct.
 4. **`origin: new` scenarios** get an additional `@Tag("new-behavior")`
    annotation.
+5. **`origin: legacy-defect` scenarios** get `@Tag("legacy-defect")` plus
+   `@Tag("preserve")` or `@Tag("fix")` from the row's `disposition`, and a
+   `// replaced_by: <scenario_id>` comment when the disposition is `fix`.
+   Same reasoning as the Gherkin renderer's rule 5: the test still runs
+   against the legacy app, where the defect is real, and the tag is what
+   tells a later reader that this assertion describes behavior the
+   replacement is meant to change.
+6. **`@DisplayName`** is emitted on every method as
+   `"<scenario_id> — <Then, truncated>"`. Console and report summaries
+   truncate long display names, and two scenarios whose names differ only
+   past the truncation point are reported as one — a discrepancy that
+   surfaces as an unexplained off-by-one in a suite's own test count. The
+   `scenario_id` prefix makes the surviving prefix unique.
+7. **Text normalization** applies to every string this renderer emits into a
+   display name, a comment, or a `@CsvSource` row, per the identical rules
+   in `templates/renderers/gherkin.md`, "Text normalization" — Markdown
+   emphasis stripped, newlines collapsed. A `@CsvSource` value additionally
+   has `,` and `'` escaped per JUnit's own quoting rules.
 
 ## Idempotence requirement
 

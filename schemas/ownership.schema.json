@@ -1,0 +1,55 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "ownership.schema.json",
+  "title": "The pack's behaviors/ownership.json",
+  "description": "For every inventory node covered by more than one behavior, which single behavior owns it and which behaviors reuse it. A projection of the COVERS edges plus behaviors/order.json's wave ordering — it holds no state and asserts nothing the graph does not already contain. It exists because order.json answers 'what can be built now' but not 'who builds this shared thing, and who consumes what they built': two behaviors covering one RULE will otherwise each implement it, and the second implementation is discovered when the two disagree.",
+  "type": "object",
+  "required": ["generated_from", "shared_nodes"],
+  "additionalProperties": false,
+  "properties": {
+    "generated_from": {
+      "type": "object",
+      "required": ["nodes_sha256", "edges_sha256"],
+      "additionalProperties": false,
+      "properties": {
+        "nodes_sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "edges_sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+      },
+      "description": "The graph this was derived from. A stale hash means the ownership map describes a different graph than the pack ships — the same guard order.json already carries."
+    },
+    "shared_nodes": {
+      "type": "array",
+      "description": "One entry per node covered by two or more behaviors. Nodes covered by exactly one behavior are omitted: their ownership is not in question, and listing them would bury the entries that are.",
+      "items": {
+        "type": "object",
+        "required": ["node_id", "owner", "reused_by", "rule"],
+        "additionalProperties": false,
+        "properties": {
+          "node_id": { "type": "string", "pattern": "^[A-Z]+-[0-9]{4,}$" },
+          "node_kind": { "type": "string" },
+          "owner": {
+            "type": "string",
+            "pattern": "^BHV-[0-9]{4,}$",
+            "description": "The behavior that implements this node. Whoever builds it, builds it here; every other behavior consumes that implementation."
+          },
+          "reused_by": {
+            "type": "array",
+            "minItems": 1,
+            "items": { "type": "string", "pattern": "^BHV-[0-9]{4,}$" },
+            "description": "The behaviors that cover this node but do not own it. For each, the node is a dependency to consume, not work to do."
+          },
+          "rule": {
+            "type": "string",
+            "enum": ["lowest_wave", "lowest_wave_then_lowest_id"],
+            "description": "How the owner was chosen: the covering behavior in the earliest wave, ties broken by lowest behavior id. Mechanical and recorded, so the choice is auditable rather than asserted — and so re-generating the pack picks the same owner."
+          },
+          "derived_facts": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "For a RULE node lifted by a3/a6/a7: the formula or rule statement the owner implements. Present so a reusing behavior can tell whether the thing it needs already exists, without opening the owner's code."
+          }
+        }
+      }
+    }
+  }
+}

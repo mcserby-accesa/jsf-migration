@@ -117,12 +117,41 @@ EL expressions get special handling: JaCoCo cannot see them, so every
 component is extracted as a raw `EL` node and then *lifted* by one LLM call
 into a plain-language rule description, becoming a candidate `RULE`
 node. This is the mechanism that keeps view-layer logic from disappearing
-from the spec.
+from the spec. Database trigger and procedure bodies get the same treatment
+(`a6`), for the same reason.
+
+Computation methods get it too (`a7`), for a different reason worth stating
+separately: a formula *is* visible to JaCoCo, and coverage still doesn't
+recover it. Knowing every branch of `total()` ran says nothing about the
+operand order, the rounding mode, or which intermediate is deliberately left
+unrounded — the scenarios sample the function at a few points, and the
+implementer has to rebuild the function. Alongside the formulas, Phase A
+extracts the other facts no amount of observed behavior recovers: numeric
+precision and scale, enumerated value domains, hardcoded constants,
+converter locales and patterns, and literal on-screen wording. See
+`docs/phase-a-inventory.md`, "Value facts."
+
+And Phase A extracts the **layout**: the container tree of every screen — its
+grids, tabs, accordions, and toolbars, in document order, with the rule that
+conditions each one's rendering — plus the template each view composes into
+and the navigation menu that template owns. This is not visual fidelity, and
+the distinction is the whole of it: whether eighteen fields sit in two
+columns or stack, and whether a screen is a three-tab wizard or one long
+scroll, are structural facts about the legacy application, while spacing and
+colour are target-design decisions that mostly aren't in the application's
+source anyway. Filing the first under the second is how the framework's own
+first pilot produced a rebuild with no layout at all. Each tree is rendered
+into a text wireframe, and a final step (`a8`) drives the booted application
+and photographs each screen as a reference nothing in the pack depends on.
+See `docs/phase-a-inventory.md`, "Layout," and `DECISIONS.md`.
 
 Phase A ends with a deterministic validator (`a5`): every edge's endpoints
 must resolve to real node IDs, every `legacy_refs` entry must resolve to a
-real `file:line`. A graph that fails this validator does not proceed to
-Phase B. See `docs/phase-a-inventory.md`.
+real `file:line`, every structural skeleton, layout tree and value fact is
+present, every screen is either photographed or accounted for, and the
+application has exactly one stated identity model. A graph that fails
+this validator does not proceed to Phase B. See
+`docs/phase-a-inventory.md`.
 
 ### Phase B — Behaviors
 
@@ -159,9 +188,11 @@ than logic branches, pairwise reduction (PICT/ACTS) cuts the table down to a
 tractable, still-covering set (`c2b`).
 
 The AC/decision-table content is then rendered — mechanically, per
-`framework.yaml`'s `spec_format` — into Gherkin and/or JUnit (`c3`). Rendered
-tests run against the *legacy* application under coverage instrumentation
-(`c4`). Every branch the legacy app can reach that the rendered tests didn't
+`framework.yaml`'s `spec_format` — into Gherkin and/or JUnit (`c3`), and the
+rendered files are parsed with a real parser to prove they load (`c3b`;
+deterministic rendering and loadable output are different claims, and only
+the first follows from the mapping). Rendered tests run against the *legacy*
+application under coverage instrumentation (`c4`). Every branch the legacy app can reach that the rendered tests didn't
 exercise gets triaged into exactly one bucket: missing scenario, dead code,
 or unreachable-defensive (`c5` — one branch, one judgment). The
 resulting triage log is itself a deliverable: it is the evidence that the
@@ -169,12 +200,20 @@ spec is complete relative to the legacy system's actual behavior, not just
 relative to what a human remembered to write down.
 
 Phase C also derives the **REST API contract** for the replacement, from the
-extracted service skeletons plus a human-authored conventions file. This is
-the only place the framework describes the new system rather than the old
-one, and it earns the exception because two independently-built sides — the
-Angular client and the Spring backend — must agree on it or fail at
-integration. Emitting it once as OpenAPI and generating both sides from that
-document removes the disagreement entirely. See `docs/spec-pack.md`.
+extracted page and service skeletons plus a human-authored conventions file
+(`c7`/`c8`). This is the only place the framework describes the new system
+rather than the old one, and it earns the exception because two
+independently-built sides — the Angular client and the Spring backend — must
+agree on it or fail at integration. Emitting it once as OpenAPI and
+generating both sides from that document removes the disagreement entirely.
+See `docs/spec-pack.md`.
+
+The same argument extends one step further, to `c7b`. A legacy scenario is
+written in a page-based system's terms — a served page, an href navigation,
+a domain-object call — and much of that has no equivalent in a JSON API. The
+translation is unavoidable; making it fifty separate times at implementation
+time, unrecorded, is not. `c7b` binds every scenario to where the target can
+observe it, once, against the derived contract.
 
 ### Phase D — Spec validation
 
@@ -195,11 +234,17 @@ A `BHV-####` is done when:
 3. Every inventory node it claims to cover is linked, and it does not
    overlap another behavior's coverage without an explicit shared-`RULE`
    link.
-4. Its rendered tests, run against the legacy app, leave no untriaged
-   branch.
+4. Its rendered tests load under a real parser, and — run against the legacy
+   app — leave no untriaged branch.
+5. Every one of its scenarios has a recorded observation surface, and every
+   scenario documenting a known legacy defect has a recorded disposition.
 
-Nothing about "done" references the *new* Spring Boot/Angular implementation.
-That boundary is the point: a spec's completeness against the legacy system
+Nothing about "done" requires the *new* Spring Boot/Angular implementation to
+exist, let alone to pass. Item 5 is the one target-shaped condition, and it
+is target-shaped in the same limited way the API contract is: it records a
+decision about how a legacy assertion would be observed, which can be made
+before anything is built and cannot be made by looking at the legacy system
+alone. That boundary is the point: a spec's completeness against the legacy system
 has to be established on its own evidence, before anyone builds on it. If
 "done" meant "the new system passes," the spec and the implementation would
 be confirming each other again — the exact failure this method was designed

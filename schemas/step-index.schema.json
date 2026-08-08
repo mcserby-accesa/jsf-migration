@@ -1,0 +1,54 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "step-index.schema.json",
+  "title": "The pack's behaviors/step-index.json",
+  "description": "Every distinct step text the pack's rendered tests contain, and every behavior that renders it. A projection of c3's output. Cucumber-family harnesses match step text globally across the whole glue registry rather than per feature file, so two behaviors sharing a step text share a definition — which is the mechanism working correctly, and is why the renderer does not namespace step text per behavior. What goes wrong is that the sharing is invisible until a second definition is written and the registry throws, by which point both behaviors' work is done and one of them has to be unpicked. This file makes the sharing visible before it is discovered by collision.",
+  "type": "object",
+  "required": ["generated_from", "steps"],
+  "additionalProperties": false,
+  "properties": {
+    "generated_from": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "The rendered artifact paths this index was built from."
+    },
+    "steps": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["text", "keyword", "used_by", "definition_owner"],
+        "additionalProperties": false,
+        "properties": {
+          "text": {
+            "type": "string",
+            "minLength": 1,
+            "description": "The normalized step text as rendered (templates/renderers/gherkin.md, 'Text normalization') — what the harness actually matches on, not the authored Markdown."
+          },
+          "keyword": { "type": "string", "enum": ["Given", "When", "Then"] },
+          "used_by": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "required": ["bhv_id", "scenario_ids"],
+              "additionalProperties": false,
+              "properties": {
+                "bhv_id": { "type": "string", "pattern": "^BHV-[0-9]{4,}$" },
+                "scenario_ids": { "type": "array", "items": { "type": "string" }, "minItems": 1 }
+              }
+            }
+          },
+          "definition_owner": {
+            "type": "string",
+            "pattern": "^BHV-[0-9]{4,}$",
+            "description": "The behavior whose implementer writes the one definition of this step. Chosen by the same rule as ownership.json: earliest wave, ties broken by lowest id. Every other behavior in used_by consumes that definition rather than writing a competing one."
+          },
+          "shared": {
+            "type": "boolean",
+            "description": "True when used_by holds more than one behavior. Redundant with used_by's length, and present anyway because it is the field a reader filters on."
+          }
+        }
+      }
+    }
+  }
+}

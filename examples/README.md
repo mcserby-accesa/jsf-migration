@@ -13,20 +13,52 @@ Files, in the order they'd be produced by the pipeline:
 
 1. `inventory-excerpt/nodes.jsonl`, `inventory-excerpt/edges.jsonl` — the
    Phase A graph slice this behavior was drafted from (output shape of `a1`,
-   after `a2`/`a3`/`a4` resolved the ambiguous cases — see
-   `docs/phase-a-inventory.md`).
-2. `BHV-0142.md` — the canonical behavior document (`b3`+`b4` drafted the
+   after `a2`/`a3`/`a4`/`a7` resolved the ambiguous cases and lifted the
+   expressions — see `docs/phase-a-inventory.md`). Worth reading for the
+   value facts specifically: `DB-0044`'s `STATUS` column carries its
+   enumerated `value_domain` and `WORKING_DAYS` its `scale: 1`, `SVC-0089`
+   carries its `constants` and its one flagged `derivation_method`, and
+   `RULE-0044` is that method lifted into an explicit formula with its
+   rounding stated. None of those is recoverable from the scenarios below,
+   which is why they are extracted rather than inferred.
+
+   `AUTHN-0001` states this application's identity model, including
+   `credential_store: external` — the credentials are in the container's
+   realm, not the repository. That is a finding the pack states positively,
+   not an absence a reader is left to notice.
+
+   Worth reading for the **layout** too. `SCR-0142` carries a `layout_tree`:
+   the two-column date grid, the collapsible entitlement panel that renders
+   only for annual leave (`RULE-0052`), and the approval toolbar that
+   renders only for a manager on a pending request (`RULE-0031`). None of
+   that is in `field_groups`, which is why `field_groups` is now defined as
+   a flattening of the tree rather than a fact of its own. `TPL-0003` is the
+   page frame both screens compose into — its banner, its split layout, its
+   content region, and the navigation menu, including the Approvals item
+   that is visible only to managers. A screen skeleton without it describes
+   a fragment while reading as a description of a page.
+2. `wireframe-excerpt/SCR-0142.txt` — the same layout tree rendered by
+   `templates/renderers/wireframe.md`, which is what `c9` writes into
+   `views/wireframes/`. It states nothing the tree doesn't; read the two
+   side by side and the reason it exists is the point — one of them can be
+   seen, the other has to be reassembled.
+
+   Not shown here, because it cannot be: `reference/screenshots/`, the
+   captured image of this screen as the booted legacy application actually
+   rendered it (`a8`). It is non-normative — nothing in the pack derives
+   from it or is checked against it.
+3. `BHV-0142.md` — the canonical behavior document (`b3`+`b4` drafted the
    boundary and scenario stubs; `c1` derived the final AC list; `c2` added
    the decision table for the one compound condition; `c5`'s triage
    findings added scenario S03 after the fact). Structure follows
    `templates/BHV-template.md`.
-3. `triage-log-excerpt.jsonl` — two entries from `c5-triage-uncovered-branch`
+4. `triage-log-excerpt.jsonl` — two entries from `c5-triage-uncovered-branch`
    showing one `missing_scenario` (which fed back into `BHV-0142.md` as
    scenario S03) and one `unreachable_defensive` (accepted, with its
    justification).
-4. `BHV-0142.feature` — the Gherkin rendering of `BHV-0142.md`, produced
+5. `BHV-0142.feature` — the Gherkin rendering of `BHV-0142.md`, produced
    mechanically by `c3-render-tests` per `templates/renderers/gherkin.md`.
-5. `BHV0142LeaveRequestDetailSubmissionTest.java` — the JUnit rendering of
+6. `BHV0142LeaveRequestDetailSubmissionTest.java` — the JUnit rendering of
    the same document, per `templates/renderers/junit.md`, with
    `legacy_test_seam: service`.
 

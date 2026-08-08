@@ -1,0 +1,68 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "open-questions.schema.json",
+  "title": "One line of the pack's triage/open-questions.jsonl",
+  "description": "The register of specification gaps: things the legacy application does not answer, that the pipeline decided under stated assumptions, or that it could not decide at all. Seeded by the pipeline at assembly (c9) from the states upstream steps already record — a null value_domain, a lift with open_value_domain, a scenario bound not-observable or preserves_legacy_meaning false, a credential_store of external, an operation resolved by c8's judgment rather than by rule. Append-only thereafter; the implementer appends resolutions rather than editing entries. Distinct from triage/triage-log.jsonl, which registers uncovered legacy BRANCHES; this registers unanswered SPEC questions, and the two are not substitutes.",
+  "type": "object",
+  "required": ["id", "raised_by", "subject", "question", "status"],
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^OQ-[0-9]{4,}$",
+      "description": "Assigned once, never reused, never renumbered — external references (commit messages, progress entries, an implementer's own notes) stay stable. Same discipline as inventory node ids."
+    },
+    "raised_by": {
+      "type": "string",
+      "description": "The step whose output seeded this entry (a1, a3, a6, a7, c7, c7b, c8), or 'implementer' for one appended after handover."
+    },
+    "subject": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "string" },
+      "description": "The inventory node ids, behavior ids, scenario ids, or operation ids this question is about. What makes the entry findable from the artifact that raises it."
+    },
+    "category": {
+      "type": "string",
+      "enum": [
+        "unenumerated_value_domain",
+        "unstated_formula_input",
+        "no_target_surface",
+        "adapted_semantics",
+        "external_credential_store",
+        "absent_persistence_target",
+        "judged_endpoint",
+        "other"
+      ],
+      "description": "What kind of gap this is. Categories exist so a reviewer can read the register for patterns rather than entry by entry — a pack with thirty unenumerated_value_domain entries has an extraction problem, not thirty problems."
+    },
+    "question": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The question, stated so it can be answered without re-deriving the context. Not 'SEPA unclear' but 'which ISO country codes does the legacy IBAN validator treat as SEPA? The expression tests membership without enumerating the set.'"
+    },
+    "evidence": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "legacy_refs spans establishing that the gap is real — that the source genuinely does not answer this, rather than that nobody looked."
+    },
+    "assumption": {
+      "type": ["string", "null"],
+      "description": "What the pipeline assumed in order to proceed, when it proceeded. Null when it stopped instead. An assumption recorded here is a decision the pack owns; an assumption made silently is a decision nobody owns."
+    },
+    "blocks": {
+      "type": "boolean",
+      "default": false,
+      "description": "True when this question must be answered before the affected behavior can be implemented at all. Blocking entries are the ones a handover conversation is actually about; the rest are recorded so they are not rediscovered."
+    },
+    "status": {
+      "type": "string",
+      "enum": ["open", "assumed", "answered", "withdrawn"],
+      "description": "open: unanswered. assumed: proceeding under the stated assumption, still revisitable. answered: resolved, with the answer in resolution. withdrawn: no longer a question (the premise was wrong)."
+    },
+    "resolution": {
+      "type": ["string", "null"],
+      "description": "The answer, and who decided it. Appended after handover by whoever answers; the pipeline never writes this field."
+    }
+  }
+}

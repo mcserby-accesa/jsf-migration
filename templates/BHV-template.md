@@ -80,12 +80,13 @@ Each row becomes one Gherkin scenario and/or one JUnit test method via
 `templates/renderers/`. `scenario_id` is stable once assigned — renderers and
 the coverage triage log key off of it, not off row position.
 
-| scenario_id | Given | When | Then | legacy_refs | origin | decision_table_ref |
-|---|---|---|---|---|---|---|
-| BHV-####-S01 | <precondition> | <action> | <observable outcome> | `file.java:120-134` | legacy | |
-| BHV-####-S02 | ... | ... | ... | ... | legacy | |
-| BHV-####-S03 | *(example of a new, gap-fill scenario — rare; requires a human author, never produced by c1)* | ... | ... | *(no legacy_refs entry needed)* | new | |
-| BHV-####-S04 | *(example of a scenario summarizing a decision table rather than authored directly)* | ... | ... | `file.java:201` | legacy | DT-BHV-####-01 |
+| scenario_id | Given | When | Then | legacy_refs | origin | disposition | replaced_by_scenario_id | decision_table_ref |
+|---|---|---|---|---|---|---|---|---|
+| BHV-####-S01 | <precondition> | <action> | <observable outcome> | `file.java:120-134` | legacy | | | |
+| BHV-####-S02 | ... | ... | ... | ... | legacy | | | |
+| BHV-####-S03 | *(example of a new, gap-fill scenario — rare; requires a human author, never produced by c1)* | ... | ... | *(no legacy_refs entry needed)* | new | | | |
+| BHV-####-S04 | *(example of a scenario summarizing a decision table rather than authored directly)* | ... | ... | `file.java:201` | legacy | | | DT-BHV-####-01 |
+| BHV-####-S05 | *(example of a confirmed legacy defect the migration deliberately fixes)* | ... | ... | `file.java:88` | legacy-defect | fix | BHV-####-S06 | |
 
 Rules for filling this table:
 
@@ -94,6 +95,28 @@ Rules for filling this table:
 - `origin: new` scenarios are the only rows a human, not a step, may add
   directly. They exist for deliberate behavior changes in the migration
   (a gap being fixed), not for "logic I assume should exist."
+- `origin: legacy-defect` marks a scenario that is **true of the legacy
+  system and known to be wrong**. It still cites `legacy_refs`, still
+  renders, and is still run by `c4` — the legacy system does what it says,
+  and a spec that omitted it would be an incomplete description of the
+  system being replaced. What it additionally carries is a `disposition`:
+  - `preserve` — the replacement keeps this behavior, defect and all
+    (something downstream depends on it, or changing it is out of scope).
+  - `fix` — the replacement deliberately does not reproduce it. Requires
+    `replaced_by_scenario_id` naming the `origin: new` scenario that states
+    what the replacement does instead.
+
+  Without this distinction, a defect scenario reaches an implementer as an
+  ordinary requirement, and they either rebuild the bug or reason their way
+  around it privately. Both outcomes are invisible until someone re-reads
+  the legacy code — which is the thing this framework exists to stop being
+  necessary. `disposition` is empty for every `origin: legacy` and
+  `origin: new` row.
+
+Where a scenario becomes observable in the *target* system is not recorded
+here. This document describes the legacy application; the observation
+surface is derived in Phase C by `c7b` against the API contract and lives in
+the pack's `behaviors/scenario-bindings.json`. See `docs/spec-pack.md`.
 - A row with a non-empty `decision_table_ref` (the table's `table_id`, e.g.
   `DT-BHV-####-01` — not a specific row) means its Given/When/Then is a
   plain-language summary of the whole decision table kept in the section

@@ -27,6 +27,13 @@ ACs are written into the behavior's scenario table per
 `templates/BHV-template.md` — this is the only place ACs live; nothing
 downstream re-derives or re-authors them.
 
+`c1` produces `origin: legacy` rows only. Reclassifying one as
+`origin: legacy-defect` — "this is what the legacy system does, and it is
+wrong" — is a human judgment made at Step 5b review, along with the
+`disposition` that decides whether the replacement reproduces it. `c1` has
+no basis for that call: it derives what the code does from the code, which
+is exactly the evidence that cannot say whether the behavior was intended.
+
 ## Step 2 — Decision tables for compound logic (`c2`) and pairwise reduction (`c2b`, script)
 
 Plain Given/When/Then ACs represent single-condition branches well but lose
@@ -67,6 +74,30 @@ that Gherkin and JUnit outputs can never drift from each other or from the
 `BHV-####.md` they came from (see `docs/method.md`, principle 3). If a
 rendering rule can't mechanically express something the AC/table says, that
 is a bug in the renderer's rule set to fix, not a case for hand-translation.
+
+## Step 3b — Verify the rendered artifacts load (`c3b`, script)
+
+`c3` guarantees that the same behavior renders to the same bytes. It does
+not guarantee that those bytes parse, and those are different claims. A
+scenario title derived from scenario text collides with a sibling's; Markdown
+emphasis from the canonical `.md` survives into a step that the harness
+compiles into a regular expression; a Feature description whose reflowed
+first line begins with the word "When" is read as a stray step declaration.
+Each of these fails the whole file before a single assertion runs, and each
+is invisible until something tries to load it — which, with implementation
+out of scope, happens after handover, in a repository this framework never
+sees.
+
+So `c3b` parses `c3`'s output with a real parser for the target format —
+the application's own, not a regex approximation — and checks three
+structural properties the parser itself won't: unique scenario titles and
+method names across the whole application, plain-text step content, and no
+step keyword beginning a description line.
+
+Every failure here is a bug in `templates/renderers/*.md` or in the authored
+`BHV-####.md`, fixed at the source and re-rendered. Never in the generated
+file: a hand-edited render fails `rendering_idempotent` on the next pass, and
+that check is only meaningful if nobody works around it.
 
 ## Step 4 — Run against the legacy app under coverage (`c4`, script)
 
@@ -166,7 +197,12 @@ step adds the one semantic check the framework has:
 2. **Mandatory human review**, not sampled: every `dead_code` triage verdict
    (irreversible — it means "do not migrate"), and every `rule` behavior
    whose taxonomy or `high_risk_override` marks it as touching money,
-   authorization, or a state transition.
+   authorization, or a state transition. This review is also where a
+   scenario is reclassified `origin: legacy-defect` and given its
+   `disposition` — see step 1. A defect that reaches an implementer as an
+   ordinary requirement gets rebuilt, and the framework has no other point
+   at which anyone is looking at legacy behavior and asking whether it was
+   intended.
 3. **Track the spec-defect rate** — the fraction of reviewed items a human
    overturns. See `docs/metrics.md` #7. This is the number that says whether
    the pipeline is actually producing correct specs, as opposed to merely
@@ -176,6 +212,39 @@ step adds the one semantic check the framework has:
 The sample size for (1) is calibration data, deferred to pilot evidence, same
 as `c5`'s sampling rate — the mechanism is decided now, the rate is not.
 
+## Step 5c — Derive the endpoint contract and bind scenarios to it (`c7`, script; `c7b`)
+
+`c7` derives the target REST contract mechanically from the legacy surface
+plus the application's `api-conventions.yaml` — see `docs/spec-pack.md`,
+"The API contract." Two things about its scope matter here.
+
+First, the surface is the whole client-visible surface. A legacy JSF screen
+that renders from bean properties, a navigation menu, a converter that
+formats a value for display: none is a public service method, and each is
+something the replacement's client must fetch from somewhere. `c7` records
+a verdict for every `SCR` and `NAV` node as well as every `SVC` method — an
+operation, or `client_side_only`, or unmapped-with-a-reason routed to `c8`.
+
+Second, `c7b` then binds each of the behavior's scenarios to where the
+target can observe it: a named operation, the client, the domain layer, or
+nowhere. This is one bounded call per behavior, and it exists because a
+scenario's Given/When/Then is written in the legacy system's terms. "The
+login page is served inline at HTTP 200." "The browser navigates to /logout
+via a plain href." Each is a true, evidenced statement about a page-based
+application, and each needs a decision before it can be checked against a
+system with no pages.
+
+That decision is unavoidable. What is avoidable is making it fifty separate
+times, at implementation time, with no record — which is what happens when
+the pack ships the scenario and not the binding. `c7b` makes it once,
+against the derived contract and the conventions file's stated translation
+policy, and records it in `behaviors/scenario-bindings.json`.
+
+A binding never rewrites a scenario. The scenario remains a statement about
+the legacy system and `c4` still runs it against the legacy system; a
+binding that adapts rather than preserves the legacy meaning says so, and
+that seeds an open-questions entry.
+
 ## Step 6 — Validate (`c6`, script/validator)
 
 Deterministic checks before a behavior's acceptance work is considered done:
@@ -183,8 +252,12 @@ Deterministic checks before a behavior's acceptance work is considered done:
 1. Every AC and decision-table row cites at least one resolvable
    `legacy_refs` entry (or is explicitly `origin: new`).
 2. Rendered Gherkin/JUnit output exists for every `spec_format` value
-   configured, and round-trips: re-rendering from the same `BHV-####.md`
-   produces byte-identical output (idempotence of `c3`).
+   configured, round-trips (re-rendering from the same `BHV-####.md`
+   produces byte-identical output — idempotence of `c3`), and loads under a
+   real parser with unique titles and plain-text steps (`c3b`).
+2b. Every scenario has exactly one surface binding, and every
+   `origin: legacy-defect` scenario has a `disposition` — plus a
+   `replaced_by_scenario_id` when that disposition is `fix`.
 3. The triage log has zero entries for this behavior with status
    `unresolved` — every uncovered branch reached a final state: one of the
    three classifications above, or (only for a `sampled`-tier behavior)

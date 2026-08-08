@@ -2,21 +2,24 @@ id: c8-resolve-unmapped-endpoint
 phase: C
 kind: llm
 description: >
-  Resolve ONE legacy service method that c7's rules could not map onto an
-  HTTP operation — typically a method whose name matches no verb prefix, or
-  whose semantics are not CRUD at all (approve, recalculate, submitForReview).
-  Produces the same OpenAPI operation fragment shape c7 emits, plus the
-  reasoning for the choice.
+  Resolve ONE surface item that c7's rules could not map onto an HTTP
+  operation — typically a service method whose name matches no verb prefix or
+  whose semantics are not CRUD at all (approve, recalculate,
+  submitForReview), but also a screen whose row source could not be resolved
+  or a navigation rule whose target is computed. Produces the same OpenAPI
+  operation fragment shape c7 emits, plus the reasoning for the choice, or a
+  recorded verdict that no operation is needed.
 input:
-  type: single_service_method
+  type: single_surface_item
   source: >
-    one unmapped entry from c7 + that method's full skeleton entry (name,
-    params, return_type, action_bound, nav_outcomes), its owning SVC's fqcn
-    and annotations, the DB columns behind its param/return types, and the
-    api_conventions block
-  fields: [svc_id, method, owning_service, type_facts, api_conventions,
+    one unmapped entry from c7 + that item's full skeleton (for a method,
+    its name, params, return_type, action_bound, nav_outcomes and its owning
+    SVC's fqcn and annotations; for a screen, its fields and data tables;
+    for a navigation rule, its from/to views and condition), the DB columns
+    behind any referenced types, and the api_conventions block
+  fields: [source_node_id, item, owning_node, type_facts, api_conventions,
            unmapped_reason]
-  bound: exactly one method per call
+  bound: exactly one item per call
 prompt: prompts/c8-resolve-unmapped-endpoint.md
 output_schema: schemas/c8-resolve-unmapped-endpoint.schema.json
 validators:
@@ -33,10 +36,10 @@ escalate:
     fails the conventions check twice
   action: >
     retry once with the owning service's full public_methods list added, so
-    the method can be shaped relative to its siblings rather than alone; if
-    that fails, mark the method needs_human_contract and continue — an
-    unresolved endpoint blocks c9's completeness gate, which is the correct
-    place for it to surface, not a guessed operation shipped in the pack
+    the item can be shaped relative to its siblings rather than alone; if
+    that fails, mark it needs_human_contract and continue — an unresolved
+    endpoint blocks c9's completeness gate, which is the correct place for it
+    to surface, not a guessed operation shipped in the pack
 idempotent: true
 resumable: true
 notes: >
@@ -45,6 +48,12 @@ notes: >
   one method that the rules could not answer, which is what keeps it a
   bounded, single-judgment call rather than an architecture exercise.
 
-  A high rate of methods reaching this step is a signal about
+  A high rate of items reaching this step is a signal about
   api-conventions.yaml (its verb_prefixes are too narrow for this codebase's
   naming), not about the model. Fix the conventions file; see docs/metrics.md #6.
+
+  Every resolution this step produces is judgment rather than derivation, so
+  c9 seeds an open-questions entry for each one (category: judged_endpoint).
+  That is not a criticism of the resolution — it is how a reader of the pack
+  tells the endpoints that follow from stated conventions apart from the
+  ones a model decided.

@@ -1,0 +1,62 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "a7-lift-computation.schema.json",
+  "title": "a7-lift-computation output",
+  "type": "object",
+  "required": ["source_node_id", "method_name", "rule_node", "derived_from_edge", "confidence"],
+  "additionalProperties": false,
+  "properties": {
+    "source_node_id": { "type": "string", "pattern": "^SVC-[0-9]{4,}$" },
+    "method_name": { "type": "string", "minLength": 1 },
+    "rule_node": {
+      "type": "object",
+      "required": ["proposed_id", "kind", "label", "plain_language_description", "formula", "referenced_properties"],
+      "additionalProperties": false,
+      "properties": {
+        "proposed_id": { "type": "string", "pattern": "^RULE-[0-9]{4,}$" },
+        "kind": { "const": "rule" },
+        "label": { "type": "string", "minLength": 1 },
+        "plain_language_description": { "type": "string", "minLength": 1 },
+        "formula": {
+          "type": "string",
+          "minLength": 1,
+          "description": "The computation stated explicitly, in terms that resolve to parameters, fields, or constants present in the method body — e.g. 'quantity * unitPrice * (1 + vatRate)'. This is the field that exists because a passing acceptance scenario constrains a formula without stating it."
+        },
+        "rounding_mode": {
+          "type": ["string", "null"],
+          "description": "The rounding applied to the result, verbatim from the source (HALF_UP, FLOOR, ...), or null when the computation does not round. Null means 'this formula does not round', never 'unknown' — an unknowable rounding mode is a confidence < 0.5 escalation, not a null."
+        },
+        "scale": {
+          "type": ["integer", "null"],
+          "description": "Decimal places the result is rounded to; null when rounding_mode is null. Stated or null together with rounding_mode — a formula that rounds without saying to what is not a lifted formula."
+        },
+        "unrounded_intermediate": {
+          "type": "boolean",
+          "default": false,
+          "description": "True when this computation's result is consumed elsewhere at full precision, or when it feeds a column whose scale differs from this formula's. Recorded because that mismatch is exactly the kind of fact that survives every acceptance scenario and then changes the answer in production."
+        },
+        "referenced_properties": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Parameter, field, and constant names present in the method body only."
+        }
+      }
+    },
+    "derived_from_edge": {
+      "type": "object",
+      "required": ["from", "to", "type"],
+      "properties": {
+        "from": { "type": "string", "pattern": "^RULE-[0-9]{4,}$" },
+        "to": { "type": "string", "pattern": "^SVC-[0-9]{4,}$" },
+        "type": { "const": "DERIVED_FROM" }
+      }
+    },
+    "open_value_domain": {
+      "type": "boolean",
+      "default": false,
+      "description": "True when the formula references a set the source does not enumerate (a rate table, a supported-currency list). Not a lift failure — the lift is correct and the set is genuinely absent from the source. Seeds an open-questions entry; see docs/spec-pack.md."
+    },
+    "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+    "needs_escalation": { "type": "boolean", "default": false }
+  }
+}

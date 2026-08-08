@@ -1,0 +1,58 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "c7b-bind-scenarios-to-surface.schema.json",
+  "title": "c7b-bind-scenarios-to-surface output (one behavior's bindings)",
+  "description": "One entry per scenario in one behavior. c9 merges every behavior's output into the pack's behaviors/scenario-bindings.json projection.",
+  "type": "object",
+  "required": ["bhv_id", "conventions_hash", "bindings"],
+  "additionalProperties": false,
+  "properties": {
+    "bhv_id": { "type": "string", "pattern": "^BHV-[0-9]{4,}$" },
+    "conventions_hash": {
+      "type": "string",
+      "description": "Hash of the api-conventions.yaml these bindings were decided against. A conventions change invalidates them, the same way it invalidates c7's operations — bindings are target-side facts, and the target's conventions are their input."
+    },
+    "bindings": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["scenario_id", "surface", "rationale"],
+        "additionalProperties": false,
+        "properties": {
+          "scenario_id": { "type": "string" },
+          "surface": {
+            "type": "string",
+            "enum": ["rest", "client-side", "domain-only", "not-observable"],
+            "description": "rest: observable through a named operation. client-side: observable in the client with no server round-trip (a rendered condition, a navigation outcome that became a route). domain-only: a computation or state change with no client-visible surface, checkable only against the domain layer. not-observable: no equivalent exists in the target at any layer — an open question, not a verdict."
+          },
+          "operation_id": {
+            "type": "string",
+            "description": "Required when surface is 'rest'. Must name an operation c7/c8 emitted; this step never composes a path of its own."
+          },
+          "expected_status": {
+            "type": "integer",
+            "description": "Only when surface is 'rest' and the scenario's Then is an outcome status. Copied from the operation's fragment or from api_conventions.auth_semantics/status_mapping — never chosen here."
+          },
+          "rationale": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Why this surface, in one or two sentences. For anything other than a plain 'rest' binding this is the load-bearing field: it is what an implementer reads instead of re-deriving the decision."
+          },
+          "preserves_legacy_meaning": {
+            "type": "boolean",
+            "default": true,
+            "description": "False when the target's observable outcome is an adaptation rather than an equivalent — e.g. a legacy 'the login page is redisplayed' observed as a 401. False does not mean wrong; it means the binding is a decision someone could revisit, and it seeds an open-questions entry so that revisiting it is possible."
+          },
+          "confidence": { "type": "number", "minimum": 0, "maximum": 1 }
+        },
+        "allOf": [
+          {
+            "if": { "properties": { "surface": { "const": "rest" } }, "required": ["surface"] },
+            "then": { "required": ["operation_id"] }
+          }
+        ]
+      }
+    }
+  }
+}

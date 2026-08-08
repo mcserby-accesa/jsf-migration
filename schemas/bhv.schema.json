@@ -74,12 +74,35 @@
           "when": { "type": "string", "minLength": 1 },
           "then": { "type": "string", "minLength": 1 },
           "legacy_refs": { "type": "array", "items": { "type": "string" } },
-          "origin": { "type": "string", "enum": ["legacy", "new"] },
+          "origin": {
+            "type": "string",
+            "enum": ["legacy", "new", "legacy-defect"],
+            "description": "legacy: derived from evidence, and the replacement is expected to reproduce it. new: a deliberate addition with no legacy precedent, human-authored. legacy-defect: true of the legacy system and known to be wrong — still evidenced, still rendered, still run against the legacy app by c4, but carrying a disposition so it does not reach an implementer as an ordinary requirement."
+          },
+          "disposition": {
+            "type": ["string", "null"],
+            "enum": ["preserve", "fix", null],
+            "description": "Required when origin is legacy-defect, null otherwise. preserve: the replacement keeps the behavior. fix: the replacement deliberately does not reproduce it, and replaced_by_scenario_id names what it does instead."
+          },
+          "replaced_by_scenario_id": {
+            "type": ["string", "null"],
+            "description": "Required when disposition is fix: the origin: new scenario stating the replacement's behavior. Without it, 'fix' says what not to build and nothing about what to build."
+          },
           "decision_table_ref": {
             "type": ["string", "null"],
             "description": "Non-null means this row is a plain-language summary of one row of the referenced decision_tables entry, and is NOT independently rendered — see templates/renderers/*.md."
           }
-        }
+        },
+        "allOf": [
+          {
+            "if": { "properties": { "origin": { "const": "legacy-defect" } }, "required": ["origin"] },
+            "then": { "properties": { "disposition": { "enum": ["preserve", "fix"] } }, "required": ["disposition"] }
+          },
+          {
+            "if": { "properties": { "disposition": { "const": "fix" } }, "required": ["disposition"] },
+            "then": { "properties": { "replaced_by_scenario_id": { "type": "string", "minLength": 1 } }, "required": ["replaced_by_scenario_id"] }
+          }
+        ]
       }
     },
     "decision_tables": {

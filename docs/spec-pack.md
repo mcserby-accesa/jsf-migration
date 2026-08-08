@@ -31,6 +31,23 @@ discipline `c3`'s rendered tests already follow (`rendering_idempotent`,
 The reason: a pack with two editable copies of the same fact will eventually
 hold two different facts, and nothing will say which is right.
 
+Two files are originals the pipeline writes and the implementer then appends
+to: `behaviors/progress.jsonl` (seeded empty) and
+`triage/open-questions.jsonl` (seeded with what the pipeline could not
+answer). Both are append-only, and the manifest records them as
+`mutable_seed` and `seeded_append_only` respectively — hashed at handover
+where there is anything to hash, and excluded from the regeneration check,
+because divergence after handover is what they are for.
+
+Two further manifest kinds sit outside the original/projection pair because
+they are neither. `reference` (the screenshots) is a captured artifact
+nothing derives from: hashed for tamper-evidence, excluded from the
+regeneration check because re-photographing a page does not reproduce its
+bytes and never needed to. `carried_input` (`handover/ui-conventions.yaml`)
+is a human-authored file copied in verbatim for the implementer. Neither can
+contradict an original, because neither is a source of any fact the pack
+asserts.
+
 ## Layout
 
 ```
@@ -40,6 +57,9 @@ spec-pack/
 
   behaviors/
     order.json                   dependency order and waves           [projection]
+    ownership.json               who owns each shared node            [projection]
+    step-index.json              shared step text and its owner       [projection]
+    scenario-bindings.json       where each scenario is observable    [projection]
     progress.jsonl               implementation progress  [mutable — yours, starts empty]
     BHV-0142/
       BHV-0142.md                the spec            [original]
@@ -51,12 +71,24 @@ spec-pack/
     edges.jsonl                                      [original]
 
   views/
-    pages.json                   page skeletons, per screen           [projection]
+    pages.json                   page skeletons + layout trees        [projection]
     services.json                bean/service method surfaces         [projection]
+    templates.json               page frames, fragments, the menu     [projection]
+    wireframes/
+      SCR-####.txt               each screen, drawn                   [projection]
+      TPL-####.txt               each template frame, drawn           [projection]
+
+  reference/
+    screenshots/
+      index.json                 what was captured, and what wasn't   [projection]
+      SCR-####--<state>.png      the legacy screen, as it rendered    [reference]
+
+  handover/
+    ui-conventions.yaml          layout -> your UI stack     [carried input, optional]
 
   api/
     openapi.yaml                 the target REST contract, merged     [derived]
-    fragments/                   one fragment per source method       [derived]
+    fragments/                   one fragment per source surface      [derived]
 
   process/
     *.bpmn                       byte-identical copies of the legacy files
@@ -64,12 +96,15 @@ spec-pack/
 
   data/
     schema.json                  tables, columns, keys, triggers      [projection]
+    fixture-order.json           safe seed/teardown order             [projection]
 
   auth/
     constraints.json             who may reach what                   [projection]
+    identity.json                who exists, and where they live      [projection]
 
   triage/
     triage-log.jsonl             every uncovered branch's verdict     [original]
+    open-questions.jsonl         every unanswered spec question       [original, append-only]
 ```
 
 ## What each part is
@@ -96,12 +131,60 @@ to real legacy code. It is not a decomposition of the work — behaviors are
 **`views/pages.json`** — For each screen: its field groups, its fields
 (each with an abstracted `component_kind`, never a JSF tag name), its data
 tables with columns and pagination, its ajax wiring, its converters and
-validators. This is what replaces "go read the `.xhtml`."
+validators, and its **layout tree** — the container nesting, in document
+order, with column counts, tabs, accordions, collapse state, declared widths,
+and the rule that conditions each container's rendering. This is what
+replaces "go read the `.xhtml`."
 
 **`views/services.json`** — For each backing bean and service class: its
 public method signatures, parameter and return types, scope, which methods
 are bound to a screen action, and what navigation outcomes each can return.
 This is what replaces "go read the bean."
+
+**`views/templates.json`** — The page frames. A JSF view is rarely a whole
+page: it composes into a template that owns the banner, the menu, and the
+footer, and pulls in fragments and composite components. This file projects
+every `TPL` node — each template's own layout tree, the regions it defines,
+the parameters a composite component accepts, and the application's
+navigation menu with each item's destination, its guard, and the roles it is
+visible to. Without it the pack describes fifty fragments while reading as a
+description of fifty pages.
+
+**`views/wireframes/`** — Each screen and template drawn as fixed-width text
+from its layout tree, by the deterministic mapping in
+`templates/renderers/wireframe.md`. A projection in the strict sense: it
+holds no fact `pages.json` doesn't, and anything true in a wireframe and
+absent from the tree is a renderer bug.
+
+It exists because the tree carries the layout correctly and buries it. A
+reviewer checking the extraction against the running legacy screen, and an
+implementer or agent reading text rather than images, both need it arranged
+so the page can be seen at a glance rather than reassembled mentally from
+nesting.
+
+**`reference/screenshots/`** — Each screen as it actually rendered in the
+booted Phase-0 application, captured by `a8`, one image per significant
+state, with an index recording what was captured and — as importantly — which
+screens were not and why.
+
+These are **non-normative**. No gate parses an image, no projection derives
+from one, nothing in the pack is checked against one, and a consumer that
+cannot read images loses nothing the pack asserts. That property is
+deliberate: if dropping the screenshots left an implementer unable to build
+a page, the defect would be in the layout tree, not here. What they carry is
+what the framework does not extract and does not claim — density,
+proportion, visual weight — as a reference a human implements against, plus
+the only practical way for a reviewer to catch a layout tree that resolved a
+dynamic composition wrongly.
+
+**`handover/ui-conventions.yaml`** — Optional, and unlike
+`api-conventions.yaml` nothing derives from it. It records how the extracted
+layout maps onto the target UI stack: which component a `tabs` container
+becomes, whether a legacy fixed width survives, what happens to the shell.
+The framework can carry that decision but cannot apply it, because applying
+it is implementation. Recorded once here, it stops being made fifty times by
+whoever reaches each screen first. A pack without it passes every gate; the
+manifest records that the mapping was not stated.
 
 **`api/`** — The target REST contract. See the next section; this is the one
 part of the pack that describes the *new* system rather than the old one.
@@ -116,13 +199,34 @@ resolves to. Carrying the file over is easy; rewiring what it points at is
 the actual work, and it needs to be enumerated rather than discovered late.
 
 **`data/schema.json`** — Tables with columns, types, nullability, primary and
-foreign keys; triggers and stored procedures with pointers to their source.
-Trigger and procedure *logic* is not here — it was lifted into `RULE` nodes
-by `a6` and appears in whichever behavior covers it, because it is business
-logic that happens to live in the database.
+foreign keys, and the value facts an implementer cannot derive from observing
+behavior: numeric precision and scale, string length, defaults, check
+constraints, and each column's enumerated value domain where one is knowable
+(`docs/phase-a-inventory.md`, "Value facts"). Also triggers and stored
+procedures with pointers to their source. Trigger and procedure *logic* is
+not here — it was lifted into `RULE` nodes by `a6` and appears in whichever
+behavior covers it, because it is business logic that happens to live in the
+database.
+
+**`data/fixture-order.json`** — A topological ordering of the tables by
+foreign key, with the insert order and the reverse delete order. Derived
+entirely from `schema.json`'s keys; it seeds nothing and contains no data.
+It exists because every implementer of every behavior writes fixtures
+against the same graph, and a delete-and-reseed in the wrong order fails on
+referential integrity in a way that presents as an unrelated flaky test.
+The pack already holds the facts that answer it.
 
 **`auth/constraints.json`** — Every `web.xml` security constraint and every
 `@RolesAllowed`-style annotation, with what it restricts.
+
+**`auth/identity.json`** — The application's authentication mechanism, its
+realm, its form login/error/logout pages, its declared role vocabulary, and
+where its credentials live — including, in the common case, the positive
+statement that they live outside the repository entirely. Projected from the
+`AUTHN` node. `constraints.json` says who may reach what; without this, the
+pack never says who *exists*, and a container-managed application's identity
+model reads as an absence rather than as a finding. See
+`docs/phase-a-inventory.md`, "The identity model."
 
 **`triage/triage-log.jsonl`** — Every branch the derived tests did not cover,
 and its verdict: needs a scenario, dead code (do not migrate), or defensive
@@ -130,6 +234,8 @@ and justified. This is the evidence that the specs are complete rather than
 merely self-consistent. It is a deliverable, not a work artifact — a reviewer
 reads it whole, because the patterns across entries are what expose a spec
 that rationalized away its own gaps.
+
+**`triage/open-questions.jsonl`** — See "The open-questions register" below.
 
 ## The API contract
 
@@ -169,6 +275,84 @@ Scope line: this specifies the **surface** — paths, verbs, request and
 response shapes, status codes. Not the logic behind it. The logic is what
 the behavior specs are for.
 
+The surface is the whole client-visible surface, not the subset shaped like
+a service method. A legacy JSF screen that renders from bean properties, a
+navigation menu, a converter that formats a value for display — none is a
+public service method, and each is something the replacement's client must
+get from somewhere. `c7` therefore derives from `SCR` and `NAV` nodes as
+well as `SVC` methods, and records a verdict for every one of them: an
+operation, or `client_side_only` (the replacement needs no round-trip for
+this), or unmapped-with-a-reason routed to `c8`. A verdict of
+`client_side_only` is an answer. Silence is what produces two implementers
+inventing two different endpoints for the same screen.
+
+## Where each scenario is observable
+
+`behaviors/scenario-bindings.json` records, for every scenario in the pack,
+where the target system can observe what that scenario asserts: through a
+named operation, in the client with no round-trip, only against the domain
+layer, or — honestly — nowhere.
+
+This exists because a behavior spec describes a page-based application and
+the replacement has no pages. "The login page is served inline at HTTP 200,"
+"the browser navigates via a plain href," "`getAmount()` returns the
+unrounded figure" are all true, well-evidenced statements about the legacy
+system, and none of them can be checked against a JSON API without a
+decision first. Made at implementation time, those decisions are made once
+per behavior by whoever arrives first, in a repository this framework never
+sees. Made here, they are made once, against the derived contract and the
+application's own translation policy.
+
+Two rules keep it honest. A binding never rewrites a scenario — the scenario
+remains a statement about the legacy system, and `c4` still runs it against
+the legacy system. And a binding that adapts rather than preserves the
+legacy meaning says so (`preserves_legacy_meaning: false`), which seeds an
+open-questions entry, because an adaptation nobody recorded is
+indistinguishable from an equivalence.
+
+The bindings live outside the `BHV-####.md` documents on purpose. A behavior
+document describes the legacy application; a binding is a target-side fact
+derived from `api-conventions.yaml` and invalidated when it changes.
+Re-deriving the API contract must not rewrite fifty canonical specs.
+
+## The open-questions register
+
+`triage/open-questions.jsonl` is the pack's record of what the legacy
+application does not answer. Same discipline as the triage log — ids
+assigned once and never renumbered, entries appended and never rewritten —
+and a different subject: the triage log registers uncovered legacy
+*branches*, this registers unanswered *specification questions*. Neither
+substitutes for the other.
+
+The pipeline seeds it at assembly from states its own steps already record:
+
+| Seeded from | Reads as |
+|---|---|
+| A column whose `value_domain` is `null` | which values are legal here is not knowable from the catalog |
+| A lift with `open_value_domain: true` | this rule tests membership of a set the source never enumerates |
+| An `AUTHN` node with `credential_store: external` | the credentials are not in this repository, and something must replace them |
+| A scenario bound `not-observable`, or `preserves_legacy_meaning: false` | this assertion has no target equivalent, or has an adapted one |
+| A `c8` resolution — an endpoint decided by judgment rather than by rule | this part of the contract was a call, not a derivation |
+| A `dead_code` verdict overturned in Step 5b review | the pipeline classified this wrongly once |
+
+None of these is a defect. Each is a place where a competent implementer
+will otherwise stop, decide something reasonable, and continue — and the
+deciding is fine. What is not fine is that the decision leaves no trace, so
+the next behavior decides it again, differently, and nobody can later answer
+which decisions the delivered system actually rests on.
+
+An entry states the question so it can be answered without re-deriving the
+context, cites the evidence that the gap is real, and records the assumption
+the pipeline proceeded under, if it proceeded. `blocks: true` marks the ones
+that must be answered before the affected behavior can be built at all —
+those are what a handover conversation is actually about; the rest are
+recorded so they are not rediscovered one at a time.
+
+After handover the implementer appends resolutions. The pipeline never
+writes `resolution`, and the completeness gate checks only the entries the
+pipeline seeded — the same posture as `progress.jsonl`, for the same reason:
+this framework defines the file's shape and does not own its contents.
+
 ## Working the pack
 
 The pack ships two files for coordinating the rebuild. Together they answer
@@ -189,6 +373,31 @@ making. Cycle members share a `cycle_group` and are handled as a unit.
 
 This file is a projection: regenerate it and you get the same bytes. It holds
 no state.
+
+**`behaviors/ownership.json` — who builds each shared thing.** `order.json`
+answers what can be started; it does not answer who owns a node that three
+behaviors all cover. Left unanswered, each of the three implements it, and
+the duplication surfaces when two of the implementations disagree — a
+formula recomputed slightly differently, a validation rule with a different
+edge case. This file names one owner per shared node, chosen mechanically
+(earliest wave, ties by lowest id) and recorded with the rule that chose it,
+plus the lifted formula or rule statement where there is one, so a reusing
+behavior can tell whether what it needs already exists without reading the
+owner's code. Nodes covered by exactly one behavior are omitted — their
+ownership was never in question.
+
+**`behaviors/step-index.json` — who owns each shared step definition.** The
+same problem one layer down, and one the rendered tests create themselves.
+Cucumber-family harnesses match step text globally rather than per feature
+file, so two behaviors whose scenarios both begin "a signed-in user" resolve
+to one definition. That is the mechanism working correctly — it is why
+rendered step text is not namespaced per behavior. What goes wrong is that
+the sharing is invisible until someone writes the second definition and the
+glue registry throws, at which point both behaviors are finished and one has
+to be unpicked. This index lists every distinct rendered step text, every
+behavior that renders it, and the one behavior whose implementer defines it.
+
+Both are projections, holding no state, regenerable byte-identically.
 
 **`behaviors/progress.jsonl` — what has actually been done.** Ships empty. It
 is the only mutable file in the pack: excluded from hashing, from the
@@ -222,11 +431,20 @@ dependencies, and a safe place to record state; the process on top is yours.
   the whole method exists to close (`DECISIONS.md`, principle 5).
 - **Target architecture.** Module boundaries, framework choices, persistence
   strategy, component library, styling. The API contract's *conventions* are
-  an input to the pack, not an output of it.
+  an input to the pack, not an output of it, and so are the UI conventions.
 - **Migrated data.** Moving legacy rows into the new schema is real work and
   a real risk, but it is an ETL runbook, not a specification.
-- **Visual fidelity.** The pack says a screen has these fields in this
-  grouping with this widget kind. It does not say what it looks like.
+- **Visual fidelity.** The pack states a screen's containment, order, widget
+  kinds, and conditionality, and ships a photograph of what that looked like.
+  It does not state spacing, colour, typography, or density as *facts*, does
+  not extract them, and asserts nothing about them — in a component-library
+  application most of them are not in the application's source to extract.
+  Layout is not on this list; it used to be, and that was the mistake
+  `DECISIONS.md`'s layout entry records.
+- **Any check that a rebuild matched.** The pack says what the legacy screen
+  was. Nothing here verifies that what gets built resembles it — the
+  framework has no standing to (`DECISIONS.md`, "Structural fidelity is the
+  implementer's call") and ships no validator that tries.
 
 ## Completeness gate — `spec_pack_complete`
 
@@ -239,14 +457,41 @@ The pack is not handed over until a deterministic check passes:
 4. Every `.bpmn` file hashes equal to its legacy source file.
 5. Every ID referenced anywhere in the pack resolves within the pack.
 6. `manifest.json` lists every file present, and every file it lists exists.
-7. Every fragment merged without collision, and every `SVC` public method
-   either has an endpoint or a recorded reason it has none.
+7. Every fragment merged without collision, and every `SVC` public method,
+   every active `SCR`, and every active `NAV` node either has an endpoint,
+   a `client_side_only` verdict, or a recorded reason it has neither.
 8. No legacy source file was copied in (`.bpmn` excepted — it is a carried
    artifact, not source standing in for a spec).
+9. Every rendered artifact parses under a real parser for its format, with
+   unique scenario titles and test-method names across the pack, and no
+   Markdown markup left in step text (`c3b`).
+10. Every scenario in the pack has exactly one surface binding, every
+    binding of surface `rest` names an operation that resolves within
+    `api/openapi.yaml`, and the bindings' `conventions_hash` matches the
+    API contract's.
+11. Every open-questions entry the pipeline seeded is well-formed and
+    resolvable: its `subject` ids exist in the pack, its status is set, and
+    every `assumed` entry states its assumption. Answering them is not a
+    gate — the pack ships with open questions by design. Shipping them
+    *unstated* is what the gate prevents.
+12. Every value fact the extractors are required to capture is present on
+    every node that must carry it, and the pack contains exactly one
+    identity model (`a5` checks this at Phase A; `c9` re-checks that what
+    passed then is what the pack actually ships).
+13. Every screen and template has a layout tree in which every field appears
+    exactly once, every guard, template reference and filled region resolves,
+    and a wireframe renders from it. Every screen has a captured reference
+    image or a recorded reason it has none.
+14. `handover/ui-conventions.yaml` is present and hashed, or recorded absent.
+    The file is optional and nothing derives from it; what the gate requires
+    is that the manifest says which, so "no UI mapping was decided" is a
+    statement rather than a silence.
 
-The steps that produce and check all this are `c7` (mechanical endpoint
-derivation), `c8` (resolve the methods the rules couldn't map), and `c9`
-(assemble and gate). Validator contracts: `validators/README.md`.
+The steps that produce and check all this are `a8` (screen reference
+capture), `c3b` (rendered-artifact verification), `c7` (mechanical endpoint
+derivation), `c7b` (scenario surface binding), `c8` (resolve what the rules
+couldn't map), and `c9` (assemble, render wireframes, and gate). Validator
+contracts: `validators/README.md`.
 
 A pack failing any of these is incomplete, not "mostly done." The value of
 the whole method rests on the claim that this description is complete; a

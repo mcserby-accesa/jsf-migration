@@ -1,0 +1,159 @@
+# UI conventions — human-authored, once per application. OPTIONAL.
+#
+# How this application's extracted layout facts map onto YOUR target UI stack.
+# Copy it to the application's working directory and fill it in; c9 carries it
+# into the spec pack at handover/ui-conventions.yaml and hashes it.
+#
+# ---------------------------------------------------------------------------
+# Read this before assuming it works like api-conventions.yaml
+# ---------------------------------------------------------------------------
+#
+# It does not, and the difference is deliberate.
+#
+# api-conventions.yaml is an INPUT to a derivation: c7 reads it, refuses to
+# run without it, and emits an OpenAPI document that could not exist
+# otherwise. This file has no such consumer. Nothing in this framework reads
+# it, no step refuses to run without it, and the wireframe renderer
+# deliberately ignores it — a wireframe depicts the LEGACY layout, and
+# rendering it through the target's conventions would corrupt the one thing
+# it is for.
+#
+# So why ship it at all? Because the mapping it records gets made either way.
+# `layout_tree` says a screen is a two-column grid inside three tabs; someone
+# has to decide what that is in Angular. Left unstated, that decision is made
+# once per screen by whoever reaches it first, and fifty screens later the
+# application has three different ideas of what a form section looks like.
+# That is the same failure the endpoint contract exists to prevent — the
+# difference is only that here the framework can record the decision without
+# being able to apply it, because applying it is implementation and
+# implementation is out of scope (DECISIONS.md).
+#
+# Being optional is therefore not an oversight. A pack ships without it and
+# passes every gate; the manifest simply records that the mapping was not
+# stated. What the framework will not do is invent one.
+
+# ---------------------------------------------------------------------------
+# Target stack
+# ---------------------------------------------------------------------------
+
+# The component library the replacement is built on. Free text — recorded,
+# not interpreted.
+component_library: ""
+#   examples: "Angular Material 17", "PrimeNG 17", "in-house design system"
+
+# The layout primitive containers map onto.
+#   css-grid | flexbox | library-grid
+layout_primitive: css-grid
+
+# Breakpoints, if the replacement is responsive. The legacy application
+# almost certainly was not — record that honestly rather than back-filling
+# breakpoints onto a fixed-width page and calling it preserved.
+responsive: true
+breakpoints:
+  sm: 600px
+  md: 960px
+  lg: 1280px
+
+# ---------------------------------------------------------------------------
+# Container mapping
+# ---------------------------------------------------------------------------
+#
+# One entry per container_kind in schemas/layout-tree.schema.json. The value
+# is whatever names the target construct — a component selector, a directive,
+# a CSS class. Recorded so that every implementer of every screen reaches for
+# the same one.
+#
+# `custom` has no entry: an unclassifiable legacy container is a known gap
+# flagged for a human at review time (docs/phase-a-inventory.md, "Layout"),
+# and a blanket mapping for it would convert that flag back into silence.
+
+container_mapping:
+  stack:         ""
+  grid:          ""
+  tabs:          ""
+  accordion:     ""
+  wizard-steps:  ""
+  split:         ""
+  toolbar:       ""
+  dialog:        ""
+  region:        ""
+  table:         ""
+
+# What happens to a container the legacy app collapsed by default.
+#   preserve  -> the target collapses it too
+#   expand    -> always expanded; the collapse was a screen-real-estate
+#                workaround the target does not need
+preserve_initial_collapse: preserve
+
+# What a legacy tab set becomes when the target is responsive and the tabs
+# do not fit.
+#   tabs | stepper | accordion | scrollable-tabs
+narrow_viewport_tabs: scrollable-tabs
+
+# ---------------------------------------------------------------------------
+# Field mapping
+# ---------------------------------------------------------------------------
+
+# One entry per component_kind. Same purpose as container_mapping.
+component_mapping:
+  text:            ""
+  multiline-text:  ""
+  single-select:   ""
+  multi-select:    ""
+  date:            ""
+  boolean-toggle:  ""
+  numeric:         ""
+
+# Where labels sit in the target, and what to do with a field whose legacy
+# label_position is `unspecified` (the source declared none and the legacy
+# component library's default applied).
+#   as-extracted -> honour each field's label_position; `unspecified` falls
+#                   back to `default_label_position`
+#   uniform      -> every field uses default_label_position regardless
+label_placement: as-extracted
+default_label_position: top
+
+# How width_class maps onto the grid. A legacy `fixed` width carries a
+# declared_width in the extraction; state whether the target honours it.
+#   honour  -> the pixel/percentage value carries over
+#   snap    -> the nearest fractional class wins; fixed widths do not survive
+fixed_width_policy: snap
+
+# ---------------------------------------------------------------------------
+# The application shell
+# ---------------------------------------------------------------------------
+
+# The legacy shell lives in a TPL node's nav_menu (docs/phase-a-inventory.md,
+# "The application shell"). This states what replaces it.
+#
+#   preserve   -> same menu tree, same nesting, same ordering
+#   flatten    -> same destinations, restructured navigation
+#   redesign   -> navigation is redesigned; the extracted menu is input, not
+#                 specification
+shell_navigation: preserve
+
+# Whether menu items the legacy app hid by role are hidden or disabled in the
+# target. The legacy behavior is extracted per item; this is the policy for
+# items where it was not declared.
+#   hide | disable
+undeclared_role_visibility: hide
+
+# ---------------------------------------------------------------------------
+# Fidelity intent
+# ---------------------------------------------------------------------------
+#
+# Recorded, never checked. This framework has no standing to verify that a
+# rebuild matched its source (DECISIONS.md, "Structural fidelity is the
+# implementer's call") and ships no validator that tries. Its value is that
+# the intent is written down once, so a reviewer comparing a rebuilt screen
+# against reference/screenshots/ knows which differences were the plan.
+#
+#   structural -> containment, order, and conditionality are preserved;
+#                 appearance is the target design system's
+#   visual     -> the rebuild also aims to look like the legacy screen
+#   redesign   -> layout is redesigned; the extraction is background
+layout_intent: structural
+
+# Free text: anything a screen-by-screen implementer should know that the
+# fields above cannot express. Carried into the pack verbatim.
+notes: ""

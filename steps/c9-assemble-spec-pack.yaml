@@ -5,7 +5,12 @@ description: >
   Assemble the spec pack (docs/spec-pack.md): copy the originals, generate
   every projection, merge c7/c8's operation fragments into one OpenAPI
   document, copy the .bpmn files byte-identically, derive
-  behaviors/order.json, seed an empty behaviors/progress.jsonl, write
+  behaviors/order.json, behaviors/ownership.json, behaviors/step-index.json,
+  behaviors/scenario-bindings.json, data/fixture-order.json and
+  auth/identity.json, render views/wireframes/ from views/pages.json, copy
+  a8's captured screen references and their index, carry
+  handover/ui-conventions.yaml if one was authored, seed
+  triage/open-questions.jsonl and an empty behaviors/progress.jsonl, write
   manifest.json and the generated README index, then run the
   spec_pack_complete gate. This is the framework's terminal step — its
   output is the deliverable.
@@ -13,8 +18,11 @@ input:
   type: whole_application
   source: >
     nodes.jsonl, edges.jsonl, every BHV-####.md that passed c6, c3's rendered
-    tests, the application triage log, c7/c8's operation fragments, the legacy
-    repository's .bpmn files, framework.yaml, api-conventions.yaml
+    tests, c3b's verification reports, the application triage log, c7/c8's
+    operation fragments and client_side_only verdicts, c7b's scenario
+    bindings, a8's capture report and the captured images, the legacy
+    repository's .bpmn files, framework.yaml, api-conventions.yaml, and
+    ui-conventions.yaml if one was authored
   bound: not applicable (deterministic script over the whole application)
 output_schema: schemas/c9-assemble-spec-pack.schema.json
 validators:
@@ -25,6 +33,59 @@ validators:
   - endpoint_contract_complete
   - dependency_order_derivable
   - no_legacy_source_in_pack
+  - rendered_artifacts_parse
+  - rendered_scenario_titles_unique
+  - step_text_is_plain_text
+  - step_index_complete
+  - scenario_surface_bound
+  - value_facts_complete
+  - layout_tree_complete
+  - wireframe_renders_for_every_screen
+  - screen_reference_captured
+  - identity_model_present
+  - open_questions_well_formed
+wireframe_rendering:
+  description: >
+    views/wireframes/SCR-####.txt and TPL-####.txt are projections of
+    views/pages.json, rendered by the deterministic mapping in
+    templates/renderers/wireframe.md. They introduce no fact: anything true
+    in a wireframe and absent from the layout_tree it came from is a renderer
+    bug. They exist because a nested JSON tree carries the layout correctly
+    and buries it — a reviewer checking the extraction against the legacy
+    screen, and an implementer reading text rather than images, both need it
+    arranged so it can be read at a glance.
+
+    Rendered at a fixed 100 columns, deliberately not configurable: a
+    projection whose bytes depend on a parameter cannot be diffed across
+    re-runs, which is most of what it is for. Covered by
+    projection_regenerates_identically like every other projection.
+screen_references:
+  description: >
+    reference/screenshots/ is copied from a8's output and indexed by a8's own
+    report; both are recorded in the manifest with kind "reference". They are
+    NON-NORMATIVE: no gate parses an image, no projection derives from one,
+    and the completeness gate checks only that the index is consistent with
+    what is on disk and that every active SCR is either captured or recorded
+    with a reason. A consumer that cannot read images loses nothing the pack
+    asserts.
+
+    That property is deliberate and load-bearing in reverse: if a later step
+    ever needs to read a screenshot, the fact it needs belongs in layout_tree
+    instead, and the correct fix is to extend a1 — the same rule that governs
+    legacy source (DECISIONS.md, principle 5).
+
+    Their sha256 is recorded at handover for tamper-evidence, and
+    re-capturing is NOT required to reproduce it — see
+    steps/a8-capture-screen-references.yaml.
+carried_inputs:
+  description: >
+    handover/ui-conventions.yaml (templates/ui-conventions.yaml) is copied
+    verbatim and hashed if the application authored one, and recorded absent
+    if it did not. Unlike api-conventions.yaml it is OPTIONAL and no step
+    reads it: it records how the extracted layout maps onto the target UI
+    stack, which is a decision the framework can carry but cannot apply,
+    because applying it is implementation. A pack without it passes every
+    gate; what the gate requires is that the manifest states which.
 order_derivation:
   description: >
     behaviors/order.json (schemas/order.schema.json) is a projection of the
@@ -43,6 +104,37 @@ order_derivation:
     from the completeness gate — this framework defines its shape and writes
     nothing into it. Append-only, because concurrent agents appending is safe
     where concurrent agents rewriting a mutable file silently drops claims.
+ownership_derivation:
+  description: >
+    behaviors/ownership.json (schemas/ownership.schema.json) and
+    behaviors/step-index.json (schemas/step-index.schema.json) are
+    projections, derived by the same rule and recording it: for a node
+    covered by several behaviors, or a step text rendered by several, the
+    owner is the covering behavior in the earliest order.json wave, ties
+    broken by lowest behavior id. Deterministic, so re-generating the pack
+    picks the same owner; recorded, so the choice is auditable rather than
+    asserted. Nodes and step texts with exactly one user are omitted from
+    ownership.json — their ownership was never in question — but every step
+    text appears in step-index.json, shared or not, because that file is
+    also how an implementer looks up whether a step already has a
+    definition.
+open_questions_seeding:
+  description: >
+    triage/open-questions.jsonl (schemas/open-questions.schema.json) is an
+    original, seeded here and append-only thereafter. This step AUTHORS
+    nothing: every entry is mechanically derived from a state an upstream
+    step already recorded — a null value_domain, a lift with
+    open_value_domain, an AUTHN credential_store of external, a c7b binding
+    of not-observable or preserves_legacy_meaning false, a c8-judged
+    endpoint, a Step 5b overturned dead_code verdict. OQ ids are assigned in
+    a stable order (category, then subject id) so a re-run reproduces them,
+    and are never reused or renumbered.
+
+    The gate checks that seeded entries are well-formed, NOT that they are
+    answered. A pack ships with open questions by design; what it must not
+    ship is an open question nobody wrote down. The resolution field is the
+    implementer's, and this step never writes it — same posture as
+    progress.jsonl.
 escalate:
   trigger: not applicable
   action: >
@@ -61,4 +153,10 @@ notes: >
   Legacy source files are never copied into the pack. If a consumer of the
   pack needs a fact that only exists in .xhtml or a class body, the correct
   fix is to extend the Phase A extractor that should have captured it — not
-  to widen this step's copy list. See DECISIONS.md, principle 5.
+  to widen this step's copy list. See DECISIONS.md, principle 5. The two
+  exceptions this step does copy — .bpmn files and captured screenshots —
+  are carried artifacts rather than source standing in for a spec: nothing
+  can be lifted out of an image, and the .bpmn files are shipped precisely
+  because the implementer must run the originals. A rendered stylesheet or a
+  saved HTML rendering of a page would be source in the sense the rule
+  means, whichever directory it was filed under, and is prohibited.

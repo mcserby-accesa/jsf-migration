@@ -4,12 +4,15 @@ kind: script
 description: >
   Deterministic exit gate for Phase A. Checks edge endpoint resolution,
   legacy_refs resolution, ID uniqueness, that no node remains
-  extraction_confidence "ambiguous", and that every known file type in the
-  application's repo layout was scanned at least once. See
+  extraction_confidence "ambiguous", that every known file type in the
+  application's repo layout was scanned at least once, that every structural
+  skeleton, layout tree and value fact is present, that the application has
+  an AUTHN node, that every active screen was either captured or accounted
+  for by a8, and that every flagged derivation method reached a7's lift. See
   docs/phase-a-inventory.md, "Phase A exit gate".
 input:
   type: full_graph
-  source: nodes.jsonl, edges.jsonl
+  source: nodes.jsonl, edges.jsonl, a8's capture report
   bound: not applicable (deterministic validator over the full graph, not an
     LLM step)
 output_schema: schemas/a5-validate-inventory.schema.json
@@ -26,3 +29,7 @@ notes: >
   Run this after every extraction pass, not just once. A "pass" result is
   what gates the Phase A -> Phase B transition referenced throughout
   docs/phase-b-behaviors.md.
+
+  a5 needs a8's capture report as well as the graph, so a8 runs between a1
+  and a5. That ordering is the only Phase A sequencing constraint beyond
+  "a1 first": a2/a3/a4/a6/a7 are per-item and order-free among themselves.

@@ -20,7 +20,12 @@
               "legacy_refs_resolve",
               "no_duplicate_ids",
               "no_remaining_ambiguous_nodes",
-              "known_file_types_scanned"
+              "known_file_types_scanned",
+              "structural_skeleton_complete",
+              "value_facts_complete",
+              "layout_tree_complete",
+              "screen_reference_captured",
+              "identity_model_present"
             ]
           },
           "passed": { "type": "boolean" },
@@ -31,7 +36,7 @@
           }
         }
       },
-      "minItems": 5
+      "minItems": 10
     }
   }
 }

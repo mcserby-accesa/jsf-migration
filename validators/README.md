@@ -55,15 +55,136 @@ file is the authority on *when it runs*.
 - **Applies to:** every active `SCR`/`SVC` node, checked by `a5`.
 - **Reads:** `raw_facts` on each `SCR`/`SVC` node.
 - **Checks:** every active `SCR` node's `raw_facts` includes `form_fields`,
-  `field_groups`, `data_tables`, `ajax_bindings`, and `converters_validators`
-  (each may be an empty list, but must be present); every active `SVC`
-  node's `public_methods` entries include `params`, `return_type`,
-  `action_bound`, and `nav_outcomes`.
+  `field_groups`, `data_tables`, `ajax_bindings`, `converters_validators`,
+  `labels`, and `messages` (each may be an empty list, but must be present);
+  every active `SVC` node's `public_methods` entries include `params`,
+  `return_type`, `action_bound`, and `nav_outcomes`. Value facts on those
+  same nodes are checked separately by `value_facts_complete`, and layout
+  facts by `layout_tree_complete`.
 - **Output:** `{ "passed": bool, "failures": ["<node id>: missing <field>"] }`.
 - **On failure:** blocks Phase A exit; the extractor stopped short of a
   complete skeleton, which is what "the implementer never reads legacy
   source" depends on — see `docs/phase-a-inventory.md`, "Structural
   skeletons," and `DECISIONS.md`.
+
+## `layout_tree_complete`
+
+- **Applies to:** every active `SCR` and `TPL` node, checked by `a1` and
+  again by `a5`; re-checked over the assembled pack by `c9`.
+- **Reads:** `raw_facts.layout_tree` and `raw_facts.layout_template` on each
+  node, `schemas/layout-tree.schema.json`, and `edges.jsonl`.
+- **Checks:**
+  1. Every active `SCR` and `TPL` has a `layout_tree` that validates against
+     the schema; every active `SCR` has a `layout_template` key (its
+     `template_ref` may be `null` — an absent key may not be).
+  2. `node_id`s are unique within their node and are the document-order
+     sequence a depth-first walk produces, with no gaps.
+  3. Every `field_id` a tree references resolves in that node's
+     `form_fields`; every `table_id` in `data_tables`; every `label_index`
+     in `labels`, at an entry whose `field_id` is null.
+  4. Every entry in `form_fields` appears **exactly once** as a leaf. A field
+     appearing twice is an extractor bug; a field appearing zero times is a
+     field with no position, which is the failure state this whole structure
+     exists to make impossible.
+  5. Every `render_guard` resolves to an active `EL` or `RULE` node whose
+     `attached_screen` (or whose `GUARDS` edge) is this node.
+  6. Every `layout_template.template_ref` and every `include` leaf's
+     `template_ref` resolves to an active `TPL`, with the matching
+     `COMPOSES_INTO` / `INCLUDES` edge present in `edges.jsonl`.
+  7. Every `region_name` a screen claims to fill exists as a `region`
+     container in that template's own `layout_tree`.
+  8. Exactly one child of each `tabs` / `wizard-steps` container has
+     `initially_selected: true`.
+  9. `field_groups` is the flattening of the tree: one entry per labelled
+     container, in document order, with the field ids beneath it. The two
+     agree exactly. `field_groups` states nothing independently — it is kept
+     because it is easier to query than a tree, not because it is a second
+     source (`docs/phase-a-inventory.md`, "Layout").
+- **Output:** `{ "passed": bool, "failures": ["<node id>[/<LT id>]: <detail>"] }`.
+- **On failure:** blocks Phase A exit (`a5`) or pack handover (`c9`).
+- **What it deliberately does not check:** that the tree is *correct* — that
+  the extractor resolved a dynamic composition the way the application
+  actually renders it. No deterministic check can, since the same view
+  renders differently per role and per row of data. That is what
+  `reference/screenshots/` gives a human reviewer, and it is the stated cost
+  of extracting layout from source rather than from a rendered DOM (see
+  `docs/phase-a-inventory.md`, "Layout").
+
+## `screen_reference_captured`
+
+- **Applies to:** `a8-capture-screen-references` output, checked by `a8` and
+  re-checked over the pack by `c9`.
+- **Reads:** `a8`'s report / `reference/screenshots/index.json`, and the
+  active `SCR` node list.
+- **Checks:** every active `SCR` appears either in `captures` (at least once)
+  or in `not_captured` with a reason from the enumerated set; every capture's
+  `screen_id` resolves to an active `SCR`; every capture file exists at its
+  recorded path with a matching `sha256`; no path appears twice.
+- **Output:** `{ "passed": bool, "failures": ["<SCR id>: <detail>"] }`.
+- **On failure:** blocks Phase A exit and pack handover.
+- **What passing does not mean:** that every screen has a screenshot. A pack
+  where a dozen screens are `unreachable_with_seed_data` passes, and should —
+  each is a real finding about the seed set. What it prevents is a screen
+  reaching handover with neither an image nor a reason, where "the capture
+  found nothing" and "there was nothing to capture" read identically.
+- **Explicitly not checked:** that a re-capture is byte-identical. Font
+  hinting and antialiasing vary between runs of the same browser on the same
+  page; the stable thing is the capture *list*, not the pixels. See
+  `steps/a8-capture-screen-references.yaml`, notes.
+
+## `wireframe_renders_for_every_screen`
+
+- **Applies to:** `views/wireframes/`, checked by `c9`.
+- **Reads:** the rendered wireframes, `views/pages.json`, and
+  `templates/renderers/wireframe.md`.
+- **Checks:** one file exists per active `SCR` and per active `TPL`; each is
+  valid UTF-8 with no line exceeding 100 columns, no trailing whitespace, and
+  exactly one trailing newline; each carries the header and `template:` lines
+  the renderer specifies; and every id appearing in a legend entry resolves
+  within the pack.
+- **Output:** `{ "passed": bool, "failures": ["<path>: <detail>"] }`.
+- **On failure:** blocks pack handover. The fix is in
+  `templates/renderers/wireframe.md` or in the `layout_tree` it renders,
+  never in the generated file — a hand-edited wireframe fails
+  `projection_regenerates_identically` on the next pass.
+- **Note:** byte-identical regeneration is covered by
+  `projection_regenerates_identically` and not repeated here. This validator
+  checks the properties that make the file *readable* — the same division of
+  labour as `rendering_idempotent` versus `rendered_artifacts_parse`.
+
+## `value_facts_complete`
+
+- **Applies to:** every active `SCR`/`SVC`/`DB` node, checked by `a1` and
+  again by `a5`; re-checked over the assembled pack by `c9`.
+- **Reads:** `raw_facts` on each node.
+- **Checks:** every `DB` table column carries `precision`, `scale`, `length`,
+  `default`, `check_constraints`, and `value_domain` **as keys** — `null` is
+  an acceptable value for any of them, an absent key is not; every
+  `converters_validators` entry carries `attributes`; every `SCR` carries
+  `labels` and `messages`; every `SVC` carries `constants` and
+  `derivation_methods`; and every `derivation_methods` entry has a lifted
+  `RULE` with a `DERIVED_FROM` edge back to it.
+- **Output:** `{ "passed": bool, "failures": ["<node id>: missing <field>"] }`.
+- **On failure:** blocks Phase A exit (`a5`) or pack handover (`c9`).
+- **Why `null` and absent are different:** `null` records that the catalog or
+  the source had nothing to say, which is a finding and routes to the
+  open-questions register. An absent key records that the extractor never
+  looked, which is indistinguishable from the first once the pack is handed
+  over. See `docs/phase-a-inventory.md`, "Value facts."
+
+## `identity_model_present`
+
+- **Applies to:** the graph, checked by `a5`; the pack, checked by `c9`.
+- **Reads:** `nodes.jsonl` for `AUTHN` nodes; `auth/identity.json` in the pack.
+- **Checks:** exactly one active `AUTHN` node exists, with `auth_method`,
+  `declared_roles`, and `credential_store` set; and `auth/identity.json`
+  projects it. An application with no authentication passes with
+  `auth_method: none` — the check is that the pack *states* the identity
+  model, not that there is one.
+- **Output:** `{ "passed": bool, "failures": ["<detail>"] }`.
+- **On failure:** blocks Phase A exit / pack handover. Almost always the auth
+  scanner not having run, since every application has an answer here even if
+  the answer is "none."
 
 ## `no_remaining_ambiguous_nodes`
 
@@ -140,6 +261,108 @@ file is the authority on *when it runs*.
 - **Output:** `{ "passed": bool, "failures": ["missing format: <fmt>"] }`.
 - **On failure:** re-run `c3`.
 
+## `rendered_artifacts_parse`
+
+- **Applies to:** `c3`'s rendered output, checked by `c3b` per behavior and
+  re-checked over the whole pack by `c9`.
+- **Reads:** every rendered `.feature` / test class, and the application's
+  own parser for that format.
+- **Checks:** the file loads. Not that its scenarios pass — that no parser
+  error, dialect error, or regex-compilation error occurs while reading it.
+- **Output:** `{ "passed": bool, "failures": [{ "location": "<file:line>", "detail": "<parser message>" }] }`.
+- **On failure:** blocks the behavior's Phase C sign-off. The fix is in
+  `templates/renderers/*.md` or in the authored `BHV-####.md`, never in the
+  generated file — a hand-edited render fails `rendering_idempotent` on the
+  next pass.
+- **Why a real parser:** the framework specifies a deterministic mapping from
+  spec structure to test structure, which guarantees the same input renders
+  to the same bytes and guarantees nothing about whether those bytes load.
+  Only a parser knows what its own dialect rejects, and every rejection this
+  catches is otherwise silent until someone runs the file — after handover,
+  in a repository this framework never sees.
+
+## `rendered_scenario_titles_unique`
+
+- **Applies to:** `c3`'s rendered output, checked by `c3b` and by `c9`.
+- **Reads:** every rendered scenario title, test-method name, and
+  `@DisplayName` across the whole pack.
+- **Checks:** no two are equal, and no two share a common prefix up to the
+  point where a typical console summary truncates.
+- **Output:** `{ "passed": bool, "failures": [{ "location": "<scenario_id>", "collides_with": ["<scenario_id>"] }] }`.
+- **On failure:** blocks Phase C sign-off. Under the current renderer rules
+  this is satisfied by construction (every title carries its `scenario_id`),
+  which is the point: the validator guards the construction rather than
+  hoping the authored text happens to differ. Duplicate titles are rejected
+  outright by some harnesses and silently merged in the reports of others —
+  and the second failure mode presents as a suite whose own test count is
+  inconsistent with itself.
+
+## `step_text_is_plain_text`
+
+- **Applies to:** `c3`'s rendered output, checked by `c3b` and by `c9`.
+- **Reads:** every rendered step, title, and `Examples:`/`@CsvSource` cell.
+- **Checks:** no unescaped Markdown emphasis marker, no embedded newline, no
+  unescaped table delimiter — per `templates/renderers/gherkin.md`, "Text
+  normalization."
+- **Output:** `{ "passed": bool, "failures": [{ "location": "...", "source_field": "given|when|then|title|expected_outcome", "detail": "..." }] }`.
+- **On failure:** blocks Phase C sign-off. `source_field` points at the
+  authored field so the fix lands in the canonical document.
+- **Note:** the canonical `BHV-####.md` is Markdown and its cells are written
+  to be read there; emphasis in an authored cell is not a defect. Emphasis
+  surviving into a step that a harness compiles into a regular expression is.
+
+## `step_index_complete`
+
+- **Applies to:** `behaviors/step-index.json`, checked by `c9`.
+- **Reads:** the index and every rendered artifact in the pack.
+- **Checks:** every distinct rendered step text appears exactly once in the
+  index; every behavior rendering it is listed in its `used_by`; every entry
+  names a `definition_owner` that is one of them; and the owner is the one
+  the documented rule selects (earliest wave, ties by lowest id).
+- **Output:** `{ "passed": bool, "failures": ["<step text>: <inconsistency>"] }`.
+- **On failure:** blocks pack handover — a stale index is worse than none,
+  because it will be trusted.
+- **What it deliberately does not check:** that step texts are unique across
+  behaviors. Shared step text is how a shared glue layer works, and
+  rewriting it to be unique would discard the reuse. The failure this
+  addresses is not that two behaviors share a step; it is that neither knew.
+
+## `scenario_surface_bound`
+
+- **Applies to:** `behaviors/scenario-bindings.json`, checked by `c9`.
+- **Reads:** the bindings, every behavior's scenarios, and `api/openapi.yaml`.
+- **Checks:** every scenario in the pack has exactly one binding; every
+  `rest` binding names an `operation_id` that resolves in the merged OpenAPI
+  document; every non-`rest` binding has a non-empty rationale; the
+  bindings' `conventions_hash` equals the manifest's; and every binding with
+  `surface: not-observable` or `preserves_legacy_meaning: false` carries an
+  `open_question_id` that resolves in the open-questions register.
+- **Output:** `{ "passed": bool, "failures": ["<scenario_id>: <detail>"] }`.
+- **On failure:** blocks pack handover.
+- **What passing does not mean:** that every scenario is observable in the
+  target. A pack where a dozen scenarios bind `not-observable` passes this
+  check, and should — those are real findings, each with a register entry.
+  What it prevents is a scenario reaching an implementer with no decision
+  recorded either way.
+
+## `open_questions_well_formed`
+
+- **Applies to:** `triage/open-questions.jsonl`, checked by `c9`.
+- **Reads:** every entry the pipeline seeded (`raised_by` is a step id).
+- **Checks:** ids are unique, match `OQ-####`, and are assigned in the
+  documented stable order; every `subject` id resolves within the pack;
+  `status` is set; every `assumed` entry states its `assumption`; every
+  upstream state that should seed an entry has one (a null `value_domain`, a
+  lift with `open_value_domain`, an external `credential_store`, a
+  `not-observable` binding, a `c8`-judged endpoint).
+- **Output:** `{ "passed": bool, "failures": ["<OQ id or source>: <detail>"] }`.
+- **On failure:** blocks pack handover.
+- **Not checked:** whether any question is answered. A pack ships with open
+  questions by design; the gate exists so it cannot ship with an open
+  question nobody wrote down. Entries appended after handover (`raised_by:
+  implementer`) are outside this check entirely — same posture as
+  `progress.jsonl`.
+
 ## `no_unresolved_triage_entries`
 
 - **Applies to:** one `BHV-####`'s branch coverage, checked by `c6`.
@@ -182,12 +405,14 @@ file is the authority on *when it runs*.
 ## `endpoint_contract_complete`
 
 - **Applies to:** `c7`/`c8` output, checked by `c9`.
-- **Reads:** every active `SVC` node's `public_methods`, `c7`'s `operations`
-  and `unmapped` lists, and every `c8` resolution.
-- **Checks:** every public method reaches exactly one final state — a mapped
-  operation, or `no_endpoint` with reasoning. Zero methods remain in
-  `unmapped` unresolved, and zero are `needs_human_contract`.
-- **Output:** `{ "passed": bool, "failures": ["<SVC id>.<method>: <state>"] }`.
+- **Reads:** every active `SVC` node's `public_methods`, every active `SCR`
+  and `NAV` node, every EL-derived `RULE`, `c7`'s `operations`,
+  `client_side_only` and `unmapped` lists, and every `c8` resolution.
+- **Checks:** every one of those reaches exactly one final state — a mapped
+  operation, a `client_side_only` verdict with a rationale, or `no_endpoint`
+  with reasoning. Zero remain in `unmapped` unresolved, and zero are
+  `needs_human_contract`.
+- **Output:** `{ "passed": bool, "failures": ["<node id>[.<method>]: <state>"] }`.
 - **On failure:** blocks pack handover. A `needs_human_contract` entry is
   resolved by a human authoring that one operation, or by supplying the
   missing type facts and re-running `c8` — never by letting `c8` guess.
@@ -234,10 +459,19 @@ file is the authority on *when it runs*.
 
 - **Applies to:** the assembled pack, checked by `c9`.
 - **Reads:** every file in the pack.
-- **Checks:** no `.xhtml`, `.java`, `.jsp`, or other legacy source file has
-  been copied in. `.bpmn` files are the one deliberate exception — they are a
-  carried-over artifact, not source to be read in place of a spec.
+- **Checks:** no `.xhtml`, `.java`, `.jsp`, `.css`, or other legacy source
+  file has been copied in. Two deliberate exceptions: `.bpmn` files, and the
+  screenshots under `reference/screenshots/`. Both are carried-over
+  artifacts, not source standing in for a spec.
 - **Output:** `{ "passed": bool, "failures": ["<path>: legacy source in pack"] }`.
+- **Why a screenshot is not the loophole it looks like:** the rule exists
+  because legacy source is an unaudited channel an implementer can read
+  *instead of* the spec — copy a `.xhtml` in and the extracted skeleton stops
+  being the only description of the page. An image cannot be read that way:
+  nothing can be lifted out of it, nothing in the pack derives from it, and
+  no gate consults it. A rendered stylesheet or a saved HTML rendering of a
+  page would be a different matter and stays prohibited — that is source in
+  the sense the rule means, whichever directory it is filed under.
 - **On failure:** blocks pack handover. If something in the pack is missing a
   fact that only the source has, extend the Phase A extractor that should
   have captured it. See `DECISIONS.md`, principle 5.
@@ -266,9 +500,14 @@ file is the authority on *when it runs*.
 - **Checks:** (1) every active inventory node is covered by a behavior or
   recorded out-of-scope with a reason (re-checks `inventory_coverage_complete`);
   (2) every behavior present passed `c6`; (3) every ID referenced anywhere in
-  the pack resolves within the pack; (4) `manifest.json` lists every file
-  present and every file it lists exists; (5) each of the validators above
-  passed.
+  the pack resolves within the pack — including `operation_id`s in
+  `scenario-bindings.json`, `replaced_by_scenario_id`s in behavior
+  documents, and `OQ-####` ids referenced from anywhere; (4)
+  `manifest.json` lists every file present and every file it lists exists;
+  (5) each of the validators above passed; (6) `handover/ui-conventions.yaml`
+  is either present and hashed, or recorded absent — the file is optional
+  (nothing derives from it), and the gate checks only that the manifest says
+  which.
 - **Output:** `{ "passed": bool, "failures": ["<check>: <detail>"] }`.
 - **On failure:** the pack is not handed over. See `docs/spec-pack.md`,
   "Completeness gate" — a partial pack presented as a complete one is the one

@@ -21,10 +21,15 @@ enough to rebuild it without ever opening the legacy source:
 | Executable tests | The same specs rendered as Gherkin and/or JUnit |
 | Inventory graph | Every screen, service, rule, process, job, table, and how they connect |
 | Page & service skeletons | Field groups, widget kinds, table columns, method signatures — what replaces "go read the `.xhtml`" |
-| REST API contract | OpenAPI, derived from the legacy service surface + your conventions |
+| Layout | Every screen's container tree — tabs, grids, panels, what's conditional on what — plus the template frames and the menu, drawn as text wireframes |
+| Screen references | A photograph of each legacy screen as it actually rendered, for the density and proportion no extraction claims |
+| REST API contract | OpenAPI, derived from the legacy client-visible surface + your conventions |
+| Scenario bindings | Where each scenario is observable in a system that has no pages |
 | BPMN definitions | Copied byte-for-byte, plus an inventory of what each task binds to |
-| Data model | Tables, columns, keys, triggers, procedures |
+| Data model | Tables, columns, keys, precision and value domains, triggers, procedures |
+| Identity model | The role vocabulary, the authentication mechanism, and where credentials actually live |
 | Coverage triage log | Every legacy branch the specs *didn't* reach, and why that's acceptable |
+| Open-questions register | Every question the legacy application doesn't answer, stated rather than left to be discovered |
 
 Full manifest: [docs/spec-pack.md](docs/spec-pack.md).
 
@@ -67,7 +72,7 @@ Each phase has a gate. You do not proceed past a failing gate.
 |---|---|---|---|---|
 | **0** | Environment | Boot the legacy app with representative data | A running system to extract from and test against | It boots; the coverage tool attaches |
 | **0b** | Walking skeleton | Hand-carry *one* behavior all the way through | Proof the whole pipeline works on your app | A real test runs and reports real coverage |
-| **A** | Inventory | Run extractors over source, views, config, DB, BPMN | `nodes.jsonl` + `edges.jsonl` — the legacy graph | Nothing ambiguous or unresolvable remains |
+| **A** | Inventory | Run extractors over source, views, config, DB, BPMN; photograph the running screens | `nodes.jsonl` + `edges.jsonl` — the legacy graph | Nothing ambiguous or unresolvable remains |
 | **B** | Behaviors | Group graph nodes into behaviors and draft their specs | `BHV-####.md` documents, correctly sized | Every node belongs to some behavior |
 | **C** | Acceptance | Write acceptance criteria, render tests, run them against the legacy app, triage what they missed | Tests, decision tables, triage log, API contract | Zero untriaged branches |
 | **D** | Spec validation | Drive the specs through a browser against the legacy app | Confirmation the specs match reality | *(designed, not yet authored)* |
@@ -88,7 +93,14 @@ framework's own riskiest assumption first, not after months of work.
 Anything unambiguous is written straight through; anything ambiguous is
 routed to a single bounded model call. EL expressions get special handling —
 coverage tools cannot see them, so each one is extracted and translated into
-an explicit rule, which is what stops view-layer logic from vanishing.
+an explicit rule, which is what stops view-layer logic from vanishing. So do
+*value facts*: numeric precision, enumerated domains, hardcoded constants,
+converter locales, on-screen wording, and computation formulas — the things
+no amount of observing behavior recovers. And so does *layout*: the container
+tree of every screen, the template it composes into, and the menu — because a
+list of fields describes a three-tab wizard and one long scroll identically.
+A final step drives the running app and photographs each screen, as a
+reference nothing in the pack depends on.
 [Details](docs/phase-a-inventory.md)
 
 **Phase B — Behaviors.** Behaviors are drafted from the graph. Screen and
@@ -99,10 +111,14 @@ at a time. [Details](docs/phase-b-behaviors.md)
 
 **Phase C — Acceptance.** Acceptance criteria are derived from each
 behavior's cited legacy evidence, never invented. Compound conditions get
-decision tables. Everything renders mechanically into tests, which run
-against the *legacy* app under coverage. Whatever the tests don't reach gets
-classified: missing scenario, dead code, or defensive-and-justified. That
-triage log is the proof the spec is complete. [Details](docs/phase-c-acceptance.md)
+decision tables. Everything renders mechanically into tests, which are
+checked to actually load and then run against the *legacy* app under
+coverage. Whatever the tests don't reach gets classified: missing scenario,
+dead code, or defensive-and-justified. That triage log is the proof the spec
+is complete. Phase C also derives the target API contract and binds every
+scenario to where the target can observe it — the translation a page-based
+system's specs need before anything can check them against one that has no
+pages. [Details](docs/phase-c-acceptance.md)
 
 **Phase D — Spec validation.** Phase C's tests run at the service layer, so
 they never render a page — meaning the EL and navigation rules extracted in
@@ -120,7 +136,11 @@ you're building toward.
 of parameters for your application — output format, coverage tool, BPMN
 engine, which layer to test against. Each parameter documents what it does
 and what reads it. Copy [templates/api-conventions.yaml](templates/api-conventions.yaml)
-too, and fill in your target API conventions. Note that the framework does
+too, and fill in your target API conventions; the endpoint derivation refuses
+to run without it. [templates/ui-conventions.yaml](templates/ui-conventions.yaml)
+is optional and read by nothing — it records how the extracted layout maps
+onto your UI stack, and ships in the pack so that decision is made once
+rather than once per screen. Note that the framework does
 not specify which LLM to use; steps say only whether they need a model or a
 script, and every model-driven step is bounded small enough that a cheap
 model handles it.
@@ -137,7 +157,7 @@ pipeline is proven on your application.
 specifies exactly what each one must produce — node types, edge types,
 required fields, extraction rules. Build to that specification.
 
-**6. Run the pipeline.** Work through `steps/` in order: `a1`→`a6`, then
+**6. Run the pipeline.** Work through `steps/` in order: `a1`→`a8`, then
 `b1`→`b5`, then `c1`→`c9`. Each `steps/*.yaml` names its input, its output
 schema, its validators, and what happens on failure.
 
@@ -158,7 +178,12 @@ against unchanged input does no work twice.
 | **Behavior** (`BHV-####`) | The unit of specification: something a user or system observes, not a class |
 | **Node / edge** | An item in the legacy graph (screen, service, rule, table…) and a relationship between two |
 | **Seam** | The layer tests attach to — direct method calls (`service`), HTTP (`rest`), or a browser (`ui`) |
-| **Lift** | Turning a raw expression (an EL condition, a trigger body) into a plain-language rule |
+| **Lift** | Turning a raw expression (an EL condition, a trigger body, a computation) into a plain-language rule |
+| **Value fact** | Something no scenario recovers: a column's scale, an enum's members, a constant, a formula's rounding mode, a screen's literal wording |
+| **Layout tree** | A screen's container nesting in document order — grids, tabs, panels — with the rule that conditions each container's rendering |
+| **Wireframe** | The layout tree drawn as fixed-width text, so a page can be read at a glance and diffed across re-runs |
+| **Surface binding** | Where a legacy scenario becomes observable in a target that has no pages — an operation, the client, the domain layer, or nowhere |
+| **Open question** | Something the legacy application doesn't answer, recorded in the pack rather than left for an implementer to decide unrecorded |
 | **Coverage oracle** | Running derived tests against the *legacy* app to measure what the spec actually exercises |
 | **Triage** | Classifying a branch the tests didn't reach: missing scenario, dead code, or defensive |
 | **Spec pack** | The framework's output: the complete deliverable directory |
@@ -186,7 +211,9 @@ prompts/*.md              prompt template + examples, per model-driven step
 templates/
   BHV-template.md         the behavior document structure
   api-conventions.yaml    your target API conventions — fill this in
-  renderers/*.md          how a behavior becomes Gherkin / JUnit
+  ui-conventions.yaml     your target UI conventions — optional
+  renderers/*.md          how a behavior becomes Gherkin / JUnit,
+                          how a layout tree becomes a wireframe
 examples/                 one fully worked behavior, both renderings
 ```
 

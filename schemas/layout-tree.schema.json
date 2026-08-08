@@ -1,0 +1,183 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "layout-tree.schema.json",
+  "title": "SCR.raw_facts.layout_tree and TPL.raw_facts.layout_tree",
+  "description": "The container tree of one screen or one template, extracted by a1-extract-inventory's view/bean pair scan. Referenced from schemas/a1-extract-inventory.schema.json (whose raw_facts is deliberately an open object) and enforced by the layout_tree_complete validator. See docs/phase-a-inventory.md, 'Layout'. Every vocabulary here is abstracted and stack-neutral: the source library's tag is carried only in legacy_component, as a trace-back field. A downstream consumer keying off legacy_component instead of container_kind has bypassed the abstraction exactly as reading the .xhtml would.",
+
+  "$ref": "#/$defs/container",
+
+  "$defs": {
+    "layout_template": {
+      "type": "object",
+      "required": ["template_ref", "fills_regions", "legacy_refs"],
+      "additionalProperties": false,
+      "description": "SCR.raw_facts.layout_template. Which template frame this view composes into, and which of its named regions this view's content fills. A JSF application's actual page frame — its banner, its menu, its footer — lives in the template, not in the view; a screen skeleton that omits this describes a fragment while appearing to describe a page.",
+      "properties": {
+        "template_ref": {
+          "type": ["string", "null"],
+          "pattern": "^TPL-[0-9]{4,}$",
+          "description": "null when the view declares no template and is a whole page in itself. null is a finding, not a default: it means this screen renders its own frame."
+        },
+        "fills_regions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["region_name", "layout_node_id"],
+            "additionalProperties": false,
+            "properties": {
+              "region_name": { "type": "string", "description": "Matches a region_name in the referenced TPL's layout_tree." },
+              "layout_node_id": { "type": "string", "pattern": "^LT-[0-9]+$", "description": "The container in THIS screen's layout_tree whose content fills that region." }
+            }
+          }
+        },
+        "legacy_refs": { "type": "array", "items": { "type": "string" }, "minItems": 1 }
+      }
+    },
+
+    "container": {
+      "type": "object",
+      "required": ["node_id", "container_kind", "label", "label_bundle_key", "render_guard", "legacy_component", "legacy_refs", "children"],
+      "additionalProperties": false,
+      "properties": {
+        "node_id": {
+          "type": "string",
+          "pattern": "^LT-[0-9]+$",
+          "description": "Stable within its owning SCR/TPL node, assigned in document order by a depth-first walk. Not global: LT-3 on SCR-0142 and LT-3 on SCR-0150 are unrelated. Stability is what lets a wireframe diff and a render_guard reference survive a re-run."
+        },
+        "container_kind": {
+          "type": "string",
+          "enum": ["stack", "grid", "tabs", "accordion", "wizard-steps", "split", "toolbar", "dialog", "region", "table", "custom"],
+          "description": "Closed vocabulary. 'custom' is the honest fallback for a composite or third-party container that maps to none of the others — a script fallback for a human to classify at review time, never a guess routed to an LLM (same posture as component_kind: 'custom'). 'region' appears only inside a TPL's own tree, marking a named insertion point a screen fills."
+        },
+        "label": {
+          "type": ["string", "null"],
+          "description": "The container's rendered header/legend/tab text, resolved for the application's default locale. null when it renders no heading of its own."
+        },
+        "label_bundle_key": {
+          "type": ["string", "null"],
+          "description": "Message-bundle key behind `label`, or null for an inline literal. Same discipline as SCR.labels."
+        },
+        "columns": {
+          "type": ["integer", "null"],
+          "minimum": 1,
+          "description": "Cell columns, for container_kind grid and split. null for every other kind. A grid without a declared column count is 1."
+        },
+        "column_widths": {
+          "type": ["array", "null"],
+          "items": { "type": ["string", "null"] },
+          "description": "Per-column declared width as written in the source (e.g. '50%', '240px'), one entry per column, null where the source declared none. null for the whole field when the container is not a grid/split."
+        },
+        "orientation": {
+          "type": ["string", "null"],
+          "enum": ["horizontal", "vertical", null],
+          "description": "For toolbar and split. null elsewhere."
+        },
+        "region_role": {
+          "type": ["string", "null"],
+          "enum": ["banner", "header", "footer", "sidebar-left", "sidebar-right", "main", "dialog-footer", null],
+          "description": "For container_kind 'region' only: what the named insertion point is for, classified from the template's own layout. null for every other kind."
+        },
+        "region_name": {
+          "type": ["string", "null"],
+          "description": "For container_kind 'region': the source's own name for the insertion point (a ui:insert name), which is what a screen's layout_template.fills_regions entries match against."
+        },
+        "declared_width": {
+          "type": ["string", "null"],
+          "description": "Width as declared on this container in the source, verbatim. null when the source declared none and the component library's default applies. Not normalized to a unit — an extractor converting '50%' to a pixel count would be inventing a viewport."
+        },
+        "colspan": { "type": "integer", "minimum": 1, "default": 1 },
+        "rowspan": { "type": "integer", "minimum": 1, "default": 1 },
+        "collapsible": { "type": "boolean", "default": false },
+        "initially_collapsed": { "type": "boolean", "default": false },
+        "initially_selected": {
+          "type": "boolean",
+          "default": false,
+          "description": "For a direct child of a tabs/wizard-steps container: whether it is the pane shown on first render. Exactly one child of such a container carries true; if the source declares none, the first child in document order does."
+        },
+        "render_guard": {
+          "type": ["string", "null"],
+          "pattern": "^(EL|RULE)-[0-9]{4,}$",
+          "description": "The EL node (or the RULE a3 lifted from it) conditioning whether this container renders at all. null when it always renders. This is the field that makes conditional LAYOUT visible: today a rendered= attribute on a panel is captured as an EL node with an attached_component_id and nothing states which region of the page disappears with it."
+        },
+        "legacy_component": {
+          "type": ["string", "null"],
+          "description": "The concrete source tag (h:panelGrid, p:tabView, ui:define, ...), trace-back only. null for a synthetic root."
+        },
+        "legacy_refs": {
+          "type": "array",
+          "items": { "type": "string" },
+          "minItems": 1,
+          "description": "file:line or file:line-range for this container's opening tag."
+        },
+        "children": {
+          "type": "array",
+          "description": "Document order, always. Never sorted, never deduplicated — the order IS the layout fact.",
+          "items": {
+            "oneOf": [
+              { "$ref": "#/$defs/container" },
+              { "$ref": "#/$defs/field_ref" },
+              { "$ref": "#/$defs/data_table_ref" },
+              { "$ref": "#/$defs/static_text_ref" },
+              { "$ref": "#/$defs/include_ref" }
+            ]
+          }
+        }
+      }
+    },
+
+    "field_ref": {
+      "type": "object",
+      "required": ["child_type", "field_id"],
+      "additionalProperties": false,
+      "description": "A leaf pointing at an entry of the same SCR's form_fields. The field's own facts (component_kind, bound_property, label_position, width_class) live there and are never duplicated here — the tree states position, form_fields states substance.",
+      "properties": {
+        "child_type": { "type": "string", "const": "field" },
+        "field_id": { "type": "string" },
+        "colspan": { "type": "integer", "minimum": 1, "default": 1 },
+        "rowspan": { "type": "integer", "minimum": 1, "default": 1 }
+      }
+    },
+
+    "data_table_ref": {
+      "type": "object",
+      "required": ["child_type", "table_id"],
+      "additionalProperties": false,
+      "description": "A leaf pointing at an entry of the same SCR's data_tables.",
+      "properties": {
+        "child_type": { "type": "string", "const": "data_table" },
+        "table_id": { "type": "string" },
+        "colspan": { "type": "integer", "minimum": 1, "default": 1 }
+      }
+    },
+
+    "static_text_ref": {
+      "type": "object",
+      "required": ["child_type", "label_index"],
+      "additionalProperties": false,
+      "description": "A leaf pointing at an entry of the same SCR's labels array whose field_id is null — standalone rendered text (an instruction line, a headline) that occupies a position in the layout.",
+      "properties": {
+        "child_type": { "type": "string", "const": "static_text" },
+        "label_index": { "type": "integer", "minimum": 0, "description": "Index into SCR.raw_facts.labels." },
+        "colspan": { "type": "integer", "minimum": 1, "default": 1 }
+      }
+    },
+
+    "include_ref": {
+      "type": "object",
+      "required": ["child_type", "template_ref", "legacy_refs"],
+      "additionalProperties": false,
+      "description": "A leaf marking where another TPL node's content is pulled in (a ui:include, a composite component instance). The included content is NOT inlined here — it lives once on the TPL node, and the corresponding INCLUDES edge makes the relationship queryable. Inlining it would put one fact in two places, which is the pack's one structural rule.",
+      "properties": {
+        "child_type": { "type": "string", "const": "include" },
+        "template_ref": { "type": "string", "pattern": "^TPL-[0-9]{4,}$" },
+        "passed_params": {
+          "type": "object",
+          "description": "Attribute name -> verbatim value or EL string, for the parameters the including view passes. A composite component whose behavior is entirely determined by its parameters states nothing without them.",
+          "additionalProperties": { "type": "string" }
+        },
+        "render_guard": { "type": ["string", "null"], "pattern": "^(EL|RULE)-[0-9]{4,}$" },
+        "legacy_refs": { "type": "array", "items": { "type": "string" }, "minItems": 1 }
+      }
+    }
+  }
+}

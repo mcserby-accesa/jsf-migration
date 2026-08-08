@@ -1,0 +1,65 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "a8-capture-screen-references.schema.json",
+  "title": "a8-capture-screen-references report (also the pack's reference/screenshots/index.json)",
+  "description": "What was captured, and — as importantly — what was not and why. See docs/phase-a-inventory.md, 'Visual reference'.",
+  "type": "object",
+  "required": ["status", "captures", "not_captured"],
+  "additionalProperties": false,
+  "properties": {
+    "status": { "type": "string", "enum": ["pass", "fail"] },
+    "viewport": {
+      "type": "object",
+      "required": ["width", "height"],
+      "additionalProperties": false,
+      "description": "The viewport every capture was taken at. Recorded because a reference image without one invites a reader to infer a breakpoint the application never declared.",
+      "properties": {
+        "width": { "type": "integer", "minimum": 1 },
+        "height": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "captures": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["screen_id", "state", "path", "sha256"],
+        "additionalProperties": false,
+        "properties": {
+          "screen_id": { "type": "string", "pattern": "^SCR-[0-9]{4,}$" },
+          "state": {
+            "type": "string",
+            "description": "A short stable slug for what this capture shows: 'default', 'validation-failed', 'role-MANAGER', 'panel-expanded'. Stable across runs — it is part of the filename and of the manifest."
+          },
+          "state_reason": {
+            "type": ["string", "null"],
+            "description": "Why this state was worth a second capture — normally the RULE/EL node whose guard changes what renders. null for 'default'."
+          },
+          "path": { "type": "string", "description": "Relative to pack_root, e.g. reference/screenshots/SCR-0142--default.png." },
+          "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+          "acting_role": {
+            "type": ["string", "null"],
+            "description": "The AUTHN declared_role the capture was taken as, or null when the screen is not role-dependent."
+          }
+        }
+      }
+    },
+    "not_captured": {
+      "type": "array",
+      "description": "Every active SCR with no capture, and why. An empty array on an application with unreachable screens is the failure this step exists to prevent — 'the capture found nothing' and 'there was nothing to capture' must not read identically, which is the same confusion the AUTHN node exists to resolve for identity.",
+      "items": {
+        "type": "object",
+        "required": ["screen_id", "reason"],
+        "additionalProperties": false,
+        "properties": {
+          "screen_id": { "type": "string", "pattern": "^SCR-[0-9]{4,}$" },
+          "reason": {
+            "type": "string",
+            "enum": ["unreachable_with_seed_data", "requires_absent_role", "requires_external_system", "not_navigable_directly", "capture_failed"],
+            "description": "unreachable_with_seed_data is a finding about the seed set and belongs in the Phase 0 record; requires_external_system is a finding about the environment."
+          },
+          "detail": { "type": "string", "description": "Free text: what was tried, what happened." }
+        }
+      }
+    }
+  }
+}

@@ -80,8 +80,27 @@ to run derived tests against at all).
    opinion on the target engine. Recording the source engine matters only so
    a reader of the pack knows which execution semantics the carried-over
    files assume.
-6. **Read access to everything Phase A will extract from.** Source code,
-   `faces-config.xml` and other JSF config, the BPMN process definitions, and
+6. **Screens are reachable in a browser.** `a8-capture-screen-references`
+   drives the booted app and photographs each screen, so confirm a
+   browser-drivable entry point exists and that the seeded accounts implied
+   by the app's declared roles can actually sign in. This is *not* the same
+   check as criterion 4's `ui` seam: that one is about whether Phase C's
+   acceptance tests drive ViewState and partial-ajax through a browser, which
+   is expensive and usually declined. This one only needs a page to load far
+   enough to be photographed, and it applies whatever seam you chose.
+   Screens that turn out unreachable are recorded by `a8` with a reason
+   rather than dropped — but a whole application that cannot be reached this
+   way is worth knowing now, not at the end of Phase A.
+
+   Note what leaves with the images: a capture of a sanitized production
+   snapshot contains whatever that snapshot contains. Decide here whether
+   capture runs against synthetic fixtures, and record the decision with the
+   seed-data strategy below.
+7. **Read access to everything Phase A will extract from.** Source code,
+   `faces-config.xml` and other JSF config, the layout templates and
+   composite components under the web root (a view's `.xhtml` alone is not
+   the page — see `docs/phase-a-inventory.md`, "Layout"), the BPMN process
+   definitions, and
    the database schema (including trigger and stored-procedure definitions —
    these often live in a DBA-controlled schema separate from the app's own
    migrations). A missing grant discovered mid-Phase-A produces a
@@ -114,7 +133,7 @@ second one justifies not migrating the code.
 
 ## Exit criteria
 
-Phase 0 is passed when all six entry criteria are checked and the checks are
+Phase 0 is passed when all seven entry criteria are checked and the checks are
 recorded (a short `PHASE-0-CHECKLIST.md` in the application's own repo, dated
 and attributable, is sufficient — this framework does not prescribe its
 format because it is application-specific and not part of the graph). Phase A

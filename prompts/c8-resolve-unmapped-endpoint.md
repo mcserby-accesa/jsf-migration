@@ -6,9 +6,11 @@ Step contract: `steps/c8-resolve-unmapped-endpoint.yaml`. Output schema:
 ## System / instruction text
 
 ```
-You are mapping ONE legacy service method onto ONE HTTP operation. A rules
-engine already mapped every method it could; this one it could not, and you
-are given the reason why.
+You are mapping ONE item of the legacy client-visible surface onto ONE HTTP
+operation. Usually that is a service method; it may also be a screen whose
+row source the rules could not resolve, or a navigation rule whose target is
+computed. A rules engine already mapped everything it could; this one it
+could not, and you are given the reason why.
 
 You are NOT designing an API. The conventions are already decided and given
 to you in api_conventions — base path, path casing, singular/plural, error
@@ -17,10 +19,14 @@ convention because you would have chosen differently.
 
 Decide three things:
 
-1. Does this method have an HTTP surface at all? A method reached only by
-   another service, with action_bound false and no navigation outcome, may
-   legitimately have none. Return resolution "no_endpoint" with your
-   reasoning. Do not manufacture an endpoint to be helpful.
+1. Does this have an HTTP surface at all? A method reached only by another
+   service, with action_bound false and no navigation outcome, may
+   legitimately have none — return resolution "no_endpoint" with your
+   reasoning. A navigation rule or a display-only condition usually needs no
+   server round-trip in the replacement at all — return resolution
+   "client_side_only", also with reasoning. Do not manufacture an endpoint to
+   be helpful; both of those are answers, and a recorded verdict is what
+   stops the question being reopened once per implementer.
 
 2. What resource does it belong to? Derive it from the owning service's
    class name using api_conventions.strip_suffixes and path_case. If the
@@ -47,7 +53,7 @@ markdown fences).
 ## Input template
 
 ```
-svc_id: {{svc_id}}
+source_node_id: {{source_node_id}}
 owning_service: {{owning_service_json}}
 method: {{method_json}}
 type_facts: {{type_facts_json}}
@@ -59,7 +65,7 @@ unmapped_reason: {{unmapped_reason}}
 
 Input:
 ```
-svc_id: SVC-0089
+source_node_id: SVC-0089
 owning_service: { "fqcn": "com.acme.leave.LeaveRequestService", "annotations": ["@Stateless"] }
 method: { "name": "approve", "params": [{"name": "requestId", "type": "Long"}, {"name": "comment", "type": "String"}], "return_type": "void", "action_bound": true, "nav_outcomes": ["confirmation"] }
 type_facts: { "DB-0012": { "table": "leave_request", "columns": [{"name":"id","type":"bigint","primary_key":true},{"name":"status","type":"varchar"},{"name":"approver_comment","type":"varchar","nullable":true}] } }
@@ -70,7 +76,7 @@ unmapped_reason: no_verb_prefix_match
 Expected output:
 ```json
 {
-  "svc_id": "SVC-0089",
+  "source_node_id": "SVC-0089",
   "method_name": "approve",
   "resolution": "mapped",
   "operation": {
@@ -95,7 +101,7 @@ Expected output:
 
 Input:
 ```
-svc_id: SVC-0140
+source_node_id: SVC-0140
 owning_service: { "fqcn": "com.acme.leave.LeaveBalanceCalculator", "annotations": ["@Stateless"] }
 method: { "name": "prorate", "params": [{"name": "days", "type": "BigDecimal"}, {"name": "fraction", "type": "BigDecimal"}], "return_type": "BigDecimal", "action_bound": false, "nav_outcomes": [] }
 type_facts: {}
@@ -106,7 +112,7 @@ unmapped_reason: not_crud_shaped
 Expected output:
 ```json
 {
-  "svc_id": "SVC-0140",
+  "source_node_id": "SVC-0140",
   "method_name": "prorate",
   "resolution": "no_endpoint",
   "reasoning": "A pure computation over two numbers, not bound to any screen action and returning no domain resource. It is called by other services, not by a client. Exposing it would add an endpoint the legacy system never had. Its behavior is still specified — it belongs to whichever behavior covers the balance rule, and is reachable through that behavior's own endpoints.",
@@ -118,7 +124,7 @@ Expected output:
 
 Input:
 ```
-svc_id: SVC-0203
+source_node_id: SVC-0203
 owning_service: { "fqcn": "com.acme.report.ReportBuilder", "annotations": ["@Stateless"] }
 method: { "name": "build", "params": [{"name": "spec", "type": "com.acme.report.ReportSpec"}], "return_type": "com.acme.report.Report", "action_bound": true, "nav_outcomes": ["download"] }
 type_facts: {}
@@ -129,7 +135,7 @@ unmapped_reason: unresolvable_type
 Expected output:
 ```json
 {
-  "svc_id": "SVC-0203",
+  "source_node_id": "SVC-0203",
   "method_name": "build",
   "resolution": "needs_human_contract",
   "reasoning": "Both the parameter (ReportSpec) and the return (Report) are application types with no supplied field facts and no backing table in type_facts, so the request and response bodies cannot be described without inventing their fields. Needed: the field lists for ReportSpec and Report, either as DB columns or as an extracted type skeleton.",

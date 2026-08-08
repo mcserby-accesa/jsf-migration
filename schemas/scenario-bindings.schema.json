@@ -1,0 +1,40 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "scenario-bindings.schema.json",
+  "title": "The pack's behaviors/scenario-bindings.json",
+  "description": "Every scenario in the pack, and where the target system can observe what it asserts. A projection: c9 merges each behavior's c7b output, sorted by behavior id then scenario id, and adds nothing. Kept out of the BHV-####.md documents deliberately — those describe the legacy application, while a binding is a target-side fact derived from the API contract and invalidated when api-conventions.yaml changes. One fact, one place.",
+  "type": "object",
+  "required": ["conventions_hash", "bindings"],
+  "additionalProperties": false,
+  "properties": {
+    "conventions_hash": {
+      "type": "string",
+      "description": "The api-conventions.yaml every binding was decided against. Must equal the hash in manifest.json — bindings derived against different conventions than the shipped API contract describe a system the pack does not specify."
+    },
+    "bindings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["bhv_id", "scenario_id", "surface", "rationale"],
+        "additionalProperties": false,
+        "properties": {
+          "bhv_id": { "type": "string", "pattern": "^BHV-[0-9]{4,}$" },
+          "scenario_id": { "type": "string" },
+          "surface": {
+            "type": "string",
+            "enum": ["rest", "client-side", "domain-only", "not-observable"]
+          },
+          "operation_id": { "type": "string", "description": "Present when surface is 'rest'; resolves within api/openapi.yaml." },
+          "expected_status": { "type": "integer" },
+          "rationale": { "type": "string", "minLength": 1 },
+          "preserves_legacy_meaning": { "type": "boolean", "default": true },
+          "open_question_id": {
+            "type": ["string", "null"],
+            "pattern": "^OQ-[0-9]{4,}$",
+            "description": "Set by c9 for every binding with surface 'not-observable' or preserves_legacy_meaning false, pointing at the open-questions entry it seeded. This is the link that makes an adapted assertion findable from both directions."
+          }
+        }
+      }
+    }
+  }
+}

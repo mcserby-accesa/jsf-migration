@@ -6,7 +6,9 @@
 class BHV0142LeaveRequestDetailSubmissionTest {
 
     // legacy_refs: LeaveRequestBean.java:40-52
+    // surface: rest POST /api/v1/leave-requests (leave_requests_create)
     @Test
+    @DisplayName("BHV-0142-S01 — the request is saved with status PENDING_MANAGER_APPROVAL and the user is navigated to the confirmation screen")
     void BHV_0142_S01_requestIsSavedAndNavigatesToConfirmation() {
         // Given: startDate is before endDate
         LeaveRequestBean bean = newBeanWith(startDate("2026-06-10"), endDate("2026-06-12"));
@@ -21,7 +23,9 @@ class BHV0142LeaveRequestDetailSubmissionTest {
     }
 
     // legacy_refs: LeaveRequestBean.java:47
+    // surface: rest POST /api/v1/leave-requests (leave_requests_create), 400
     @Test
+    @DisplayName("BHV-0142-S03 — a validation error about the half-day flag is shown and the request is not saved")
     void BHV_0142_S03_singleDayWithoutHalfDayFlagShowsValidationError() {
         // Given: startDate equals endDate and the half-day flag is not set
         LeaveRequestBean bean = newBeanWith(startDate("2026-06-10"), endDate("2026-06-10"), halfDay(false));
@@ -35,7 +39,9 @@ class BHV0142LeaveRequestDetailSubmissionTest {
     }
 
     // legacy_refs: LeaveRequestBean.java:41-52
+    // surface: rest POST /api/v1/leave-requests (leave_requests_create)
     @ParameterizedTest
+    @DisplayName("DT-BHV-0142-01 — start/end date ordering check")
     @CsvSource({
         "true,  false, VALIDATION_ERROR",
         "false, true,  VALIDATION_ERROR",

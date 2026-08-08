@@ -1,0 +1,54 @@
+id: c3b-verify-rendered-artifacts
+phase: C
+kind: script
+description: >
+  Parse c3's rendered output with a real parser for the target format and
+  check the structural properties a parser alone won't catch: unique
+  scenario titles and test-method names, plain-text step content, and no
+  step keyword beginning a description line. Nothing here judges whether a
+  scenario is CORRECT — that is c4's and c6's job. This step answers the
+  narrower question c3 never asked: does the file this framework just
+  emitted actually load.
+input:
+  type: single_behavior
+  source: c3's rendered output for one behavior (every configured
+    spec_format), plus the rendered output of every behavior already
+    rendered in this application, for cross-behavior uniqueness
+  bound: not applicable (deterministic parse + comparison, not an LLM step)
+output_schema: schemas/c3b-verify-rendered-artifacts.schema.json
+validators:
+  - rendered_artifacts_parse
+  - rendered_scenario_titles_unique
+  - step_text_is_plain_text
+escalate:
+  trigger: not applicable
+  action: >
+    a failure is a bug in templates/renderers/*.md or in the authored
+    BHV-####.md, fixed at the source and re-rendered. It is never fixed by
+    editing the generated file — a hand-edited render fails
+    rendering_idempotent on the next pass, and the framework's whole
+    render-outward discipline depends on that check meaning something.
+idempotent: true
+resumable: true
+notes: >
+  This step exists because "deterministic mapping" and "loadable artifact"
+  are different claims, and the framework previously made only the first.
+  c3 guarantees that the same BHV renders to the same bytes; it does not
+  guarantee those bytes parse. Every failure this step catches — a duplicate
+  scenario title, Markdown emphasis compiled into a step regex, a
+  description line starting with "When" — is silent until the moment
+  something tries to run the file, which is after handover, in someone
+  else's repository, against a harness this framework never sees.
+
+  The parser used is the application's own — the same Gherkin or JUnit
+  tooling the implementer will run. This framework does not ship one and
+  does not name one; it requires only that the check runs against a real
+  parser rather than a regex approximation of one. A parser is the only
+  thing that knows what its own dialect rejects.
+
+  Cross-behavior uniqueness needs the whole application's rendered output,
+  not one behavior's, so this step is bounded to one behavior for its parse
+  checks and reads the rest read-only for its uniqueness check. Running it
+  per-behavior as each is rendered surfaces a collision at the moment it is
+  created, rather than at c9 when the pack is assembled and the cheapest
+  fix is long past.
