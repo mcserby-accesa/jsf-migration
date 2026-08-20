@@ -217,6 +217,8 @@ docs/
 steps/*.yaml              one contract per pipeline step
 schemas/*.json            output schema for every step
 validators/README.md      what every validator checks and when
+extractors/               how a1's extraction rules divide into runnable
+                          passes, plus one worked implementation
 prompts/*.md              prompt template + examples, per model-driven step
 templates/
   BHV-template.md         the behavior document structure

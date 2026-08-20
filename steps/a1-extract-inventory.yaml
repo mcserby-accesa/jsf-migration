@@ -48,4 +48,7 @@ notes: >
   leaves fully unspecified beyond the extraction rules in
   docs/phase-a-inventory.md — they are application-stack-specific (a JSF 1.x
   app and a JSF 2.x/PrimeFaces app need different view scanners) and are not
-  written here by design.
+  written here by design. How the extraction rules are PACKAGED into
+  independently runnable passes is specified, though — extractors/README.md
+  is the authority on the pass partition, the temporary key grammar, and the
+  merge pass that assigns final ids, and carries one worked implementation.
